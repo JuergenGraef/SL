@@ -83,6 +83,13 @@
         }
         #app.visible { display: block; }
         
+        /* App Container with safe area */
+        #app {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            padding-top: max(50px, env(safe-area-inset-top, 50px));
+        }
+        
         /* Map */
         #map {
             position: absolute;
@@ -117,13 +124,22 @@
             position: absolute;
             bottom: 0; left: 0; right: 0;
             z-index: 1000;
-            background: var(--bg);
-            border-top: 1px solid rgba(128,128,128,0.15);
+            background-color: var(--bg);
+            background-image: none;
+            border: none;
+            border-top: none;
             padding-bottom: env(safe-area-inset-bottom, 0);
             display: flex;
             justify-content: space-around;
             align-items: stretch;
             box-shadow: none;
+        }
+        .tabbar::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 1px;
+            background: rgba(128,128,128,0.15);
         }
         .tab-item {
             flex: 1;
@@ -1691,33 +1707,10 @@
     function initializeMap() {
         var isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
         
-        // MapLibre style with grayscale raster tiles
-        var mapStyle = {
-            version: 8,
-            sources: {
-                'osm': {
-                    type: 'raster',
-                    tiles: [
-                        'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',
-                        'https://b.tile.openstreetmap.org/{z}/{x}/{y}.png',
-                        'https://c.tile.openstreetmap.org/{z}/{x}/{y}.png'
-                    ],
-                    tileSize: 256,
-                    attribution: '© OpenStreetMap'
-                }
-            },
-            layers: [{
-                id: 'osm-tiles',
-                type: 'raster',
-                source: 'osm',
-                paint: {
-                    'raster-saturation': -1,
-                    'raster-brightness-min': isDarkMode ? 0.0 : 0.1,
-                    'raster-brightness-max': isDarkMode ? 0.3 : 1.0,
-                    'raster-contrast': isDarkMode ? 0.3 : 0.1
-                }
-            }]
-        };
+        // Maptiler vector style - clean grayscale
+        var mapStyle = isDarkMode 
+            ? 'https://api.maptiler.com/maps/dataviz-dark/style.json?key=jmg1Bp11a1QvmTVL92N1'
+            : 'https://api.maptiler.com/maps/dataviz-light/style.json?key=jmg1Bp11a1QvmTVL92N1';
         
         map = new maplibregl.Map({
             container: 'map',
@@ -1732,12 +1725,10 @@
         
         // Listen for dark mode changes
         window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
-            var dark = e.matches;
-            if (map.isStyleLoaded()) {
-                map.setPaintProperty('osm-tiles', 'raster-brightness-min', dark ? 0.0 : 0.1);
-                map.setPaintProperty('osm-tiles', 'raster-brightness-max', dark ? 0.3 : 1.0);
-                map.setPaintProperty('osm-tiles', 'raster-contrast', dark ? 0.3 : 0.1);
-            }
+            var newStyle = e.matches 
+                ? 'https://api.maptiler.com/maps/dataviz-dark/style.json?key=jmg1Bp11a1QvmTVL92N1'
+                : 'https://api.maptiler.com/maps/dataviz-light/style.json?key=jmg1Bp11a1QvmTVL92N1';
+            map.setStyle(newStyle);
         });
         
         // User marker
@@ -1750,6 +1741,16 @@
         map.on('load', function() {
             currentZoom = map.getZoom();
             buildClusterPills();
+            updateMarkers();
+        });
+        
+        // Re-add markers after style change (dark/light mode)
+        map.on('style.load', function() {
+            // Re-add user marker
+            if (userMarker) {
+                userMarker.addTo(map);
+            }
+            // Re-add all markers
             updateMarkers();
         });
         
