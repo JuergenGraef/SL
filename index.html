@@ -6,12 +6,10 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#000000">
-    <title>SEENÄHE</title>
+    <title>SEELOTSE</title>
     
-    <!-- Leaflet -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.Default.css" />
+    <!-- MapLibre GL JS -->
+    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.1.2/dist/maplibre-gl.css" />
     <!-- Google Material Icons -->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,300,0,0" />
     <!-- IBM Plex Sans & Mono Fonts -->
@@ -90,19 +88,12 @@
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
             z-index: 1;
-            background: linear-gradient(135deg, #e8e8e8 0%, #d0d0d0 50%, #e0e0e0 100%);
+            background: #e5e5e5;
         }
         @media (prefers-color-scheme: dark) {
-            #map {
-                background: linear-gradient(135deg, #1a1a1a 0%, #252525 50%, #1f1f1f 100%);
-            }
+            #map { background: #1a1a1a; }
         }
-        .leaflet-container { background: transparent !important; }
-        .leaflet-marker-pane, .leaflet-overlay-pane, .leaflet-popup-pane { filter: none !important; }
-        .leaflet-tile-pane { filter: grayscale(1); }
-        @media (prefers-color-scheme: dark) {
-            .leaflet-tile-pane { filter: invert(1) grayscale(1) brightness(0.7); }
-        }
+        .maplibregl-canvas { outline: none; }
         
         /* Header - Filter Pills only */
         .header-container {
@@ -127,11 +118,12 @@
             bottom: 0; left: 0; right: 0;
             z-index: 1000;
             background: var(--bg);
-            border-top: 1px solid rgba(128,128,128,0.2);
+            border-top: 1px solid rgba(128,128,128,0.15);
             padding-bottom: env(safe-area-inset-bottom, 0);
             display: flex;
             justify-content: space-around;
             align-items: stretch;
+            box-shadow: none;
         }
         .tab-item {
             flex: 1;
@@ -272,6 +264,102 @@
             margin-left: 2px;
         }
         .cluster-pill.active .count { color: var(--accent); }
+        
+        /* Search Pill - icon only */
+        .cluster-pill.search-pill {
+            padding: 8px 12px;
+        }
+        .cluster-pill.search-pill .material-symbols-rounded {
+            font-size: 20px;
+        }
+        
+        /* Search Overlay */
+        .search-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: var(--bg);
+            z-index: 6000;
+            display: none;
+            flex-direction: column;
+        }
+        .search-overlay.visible { display: flex; }
+        .search-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+        .search-header {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            gap: 12px;
+            border-bottom: 1px solid rgba(128,128,128,0.2);
+        }
+        .search-icon {
+            color: var(--text-secondary);
+            font-size: 24px;
+        }
+        .search-header input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            font-size: 17px;
+            color: var(--text);
+            outline: none;
+            font-family: 'IBM Plex Sans', sans-serif;
+        }
+        .search-header input::placeholder {
+            color: var(--text-secondary);
+        }
+        .search-close {
+            background: transparent;
+            border: none;
+            padding: 8px;
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+        .search-close .material-symbols-rounded { font-size: 24px; }
+        .search-results {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px 0;
+        }
+        .search-result {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 14px 20px;
+            cursor: pointer;
+            transition: background 0.15s ease;
+        }
+        .search-result:hover, .search-result:active {
+            background: rgba(128,128,128,0.1);
+        }
+        .search-result .material-symbols-rounded {
+            font-size: 24px;
+            color: var(--text-secondary);
+        }
+        .search-result-content { flex: 1; }
+        .search-result-title {
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--text);
+        }
+        .search-result-sub {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+        .search-hint, .search-empty {
+            padding: 40px 20px;
+            text-align: center;
+            color: var(--text-secondary);
+        }
+        .search-empty .material-symbols-rounded {
+            font-size: 48px;
+            display: block;
+            margin-bottom: 12px;
+        }
         
         /* List View */
         .list-view {
@@ -1047,14 +1135,15 @@
 <body>
     <!-- Onboarding -->
     <div id="onboarding">
-        <svg class="onboarding-logo" viewBox="0 0 319.1 68.54" xmlns="http://www.w3.org/2000/svg">
-            <path d="M55.63,8.27h.43l-6.29,24.8h-.43c-7.15-13.18-17.74-21.01-25.14-21.01-2.5,0-3.88.86-4.22,2.07-.86,3.1,4.05,8.09,11.45,13.52l9.56,7.06c6.63,4.91,8.96,10.07,7.23,16.96-2.07,8.53-11.37,16.88-26.09,16.88-8.09,0-14.81-2.5-22.13-3.62l5.42-26.87h.43c7.58,20.41,22.56,25.83,28.42,25.83,2.67,0,3.62-.86,3.62-2.58,0-2.93-3.7-7.15-10.42-12.31l-9.13-7.06c-6.98-5.34-9.39-10.76-7.49-18.34,2.84-11.62,13.35-15.5,23.85-15.5,5.6,0,10.68,1.38,13.95,3.62l6.98-3.44Z"/>
-            <path d="M93.09,29.79c-.86,8.61-10.42,14.64-22.65,16.36,1.98,5.51,5.6,9.82,11.19,9.82,2.33,0,4.82-.6,6.89-1.55l.09.43c-5.42,6.89-14.64,13.35-17.14,13.35-9.39,0-18-5.94-17.83-18.34,0-16.53,12.92-29.97,29.28-29.97,4.13,0,10.85,2.84,10.16,9.9ZM76.81,30.14c0-3.87-1.12-6.54-3.62-6.54-2.84,0-4.56,4.99-4.56,11.45,0,3.1.43,6.54,1.29,9.64,4.22-1.38,6.89-8.78,6.89-14.55Z"/>
-            <path d="M131.84,29.79c-.86,8.61-10.42,14.64-22.65,16.36,1.98,5.51,5.6,9.82,11.19,9.82,2.33,0,4.82-.6,6.89-1.55l.09.43c-5.42,6.89-14.64,13.35-17.14,13.35-9.39,0-18-5.94-17.83-18.34,0-16.53,12.92-29.97,29.28-29.97,4.13,0,10.85,2.84,10.16,9.9ZM115.56,30.14c0-3.87-1.12-6.54-3.62-6.54-2.84,0-4.56,4.99-4.56,11.45,0,3.1.43,6.54,1.29,9.64,4.22-1.38,6.89-8.78,6.89-14.55Z"/>
-            <path d="M171.62,54.34l7.15-3.36.26.6c-11.02,14.12-12.83,16.71-16.88,16.71-4.65,0-6.29-5.77-5.51-13.86l5.6-15.76c.34-.95,2.67-6.72.77-6.72-2.15,0-5.08,5.6-15.67,35.22h-16.36l8.27-32.72-7.15,3.36-.26-.6c11.02-14.12,12.83-16.7,16.88-16.7,4.65,0,6.29,5.77,5.51,13.86l-6.8,24.63h1.03c7.66-22.91,14.64-38.84,24.71-38.84,4.05,0,9.04,2.84,4.91,14.98l-6.63,19.2h.17Z"/>
-            <path d="M221.39,54.25l7.15-3.36.26.6c-11.02,14.12-12.83,16.71-16.88,16.71-4.65,0-6.29-5.77-5.51-13.86l6.46-25.49h-1.64c-9.21,36.6-16.53,39.27-22.56,39.27-5.34,0-9.13-4.48-8.52-12.57,1.12-14.64,12.4-35.39,33.07-35.39,4.13,0,7.41.86,9.99,2.93h.09l7.49-2.67h.6l-3.01,8.78-7.15,25.06h.17ZM208.39,22.48c-6.11,0-12.92,23.77-12.92,31.95,0,2.33.69,3.27,2.07,3.27,4.05,0,8.52-17.14,11.54-27.21,2.15-7.15.26-8.01-.69-8.01ZM201.24,8.96c.52-3.36,3.1-5.68,6.54-5.68,3.19,0,4.99,2.33,4.39,5.68-.52,3.44-3.01,5.77-6.2,5.77-3.45,0-5.34-2.33-4.74-5.77ZM217.95,8.96c.52-3.36,3.1-5.68,6.55-5.68,3.19,0,4.99,2.33,4.39,5.68-.52,3.44-3.01,5.77-6.2,5.77-3.44,0-5.34-2.33-4.74-5.77Z"/>
-            <path d="M269.62,54.34l7.15-3.36.26.6c-11.02,14.12-12.83,16.71-16.88,16.71-4.65,0-6.29-5.77-5.51-13.86l5.6-15.76c.34-.95,2.67-6.72.78-6.72-2.15,0-5.08,5.6-15.67,35.22h-16.62l14.81-58.73-3.19-1.55.09-.52L261.35.09h.52v.09l.26-.17-16.71,58.99h1.03c7.66-22.91,14.64-38.84,24.71-38.84,4.05,0,9.04,2.84,4.91,14.98l-6.63,19.2h.17Z"/>
-            <path d="M319.05,29.79c-.86,8.61-10.42,14.64-22.65,16.36,1.98,5.51,5.6,9.82,11.19,9.82,2.33,0,4.82-.6,6.89-1.55l.09.43c-5.42,6.89-14.64,13.35-17.14,13.35-9.39,0-18-5.94-17.82-18.34,0-16.53,12.92-29.97,29.28-29.97,4.13,0,10.85,2.84,10.16,9.9ZM302.77,30.14c0-3.87-1.12-6.54-3.62-6.54-2.84,0-4.56,4.99-4.56,11.45,0,3.1.43,6.54,1.29,9.64,4.22-1.38,6.89-8.78,6.89-14.55Z"/>
+        <svg class="onboarding-logo" viewBox="0 0 600 200" xmlns="http://www.w3.org/2000/svg">
+            <path d="M201.15,74.97h.36l-5.33,21.01h-.36c-6.05-11.16-15.03-17.8-21.3-17.8-2.12,0-3.28.73-3.57,1.75-.73,2.63,3.43,6.86,9.7,11.45l8.1,5.98c5.62,4.16,7.59,8.54,6.13,14.37-1.75,7.22-9.63,14.3-22.1,14.3-6.86,0-12.55-2.12-18.75-3.06l4.6-22.76h.36c6.42,17.29,19.11,21.89,24.07,21.89,2.26,0,3.06-.73,3.06-2.19,0-2.48-3.14-6.05-8.83-10.43l-7.73-5.98c-5.91-4.52-7.95-9.12-6.35-15.54,2.41-9.85,11.31-13.13,20.21-13.13,4.74,0,9.05,1.17,11.82,3.06l5.91-2.92Z"/>
+            <path d="M232.89,93.2c-.73,7.29-8.83,12.4-19.19,13.86,1.68,4.67,4.74,8.32,9.48,8.32,1.97,0,4.09-.51,5.84-1.31l.07.36c-4.6,5.84-12.4,11.31-14.52,11.31-7.95,0-15.25-5.03-15.1-15.54,0-14.01,10.94-25.39,24.8-25.39,3.5,0,9.19,2.41,8.61,8.39ZM219.1,93.5c0-3.28-.95-5.54-3.06-5.54-2.41,0-3.87,4.23-3.87,9.7,0,2.63.36,5.54,1.09,8.17,3.57-1.17,5.84-7.44,5.84-12.33Z"/>
+            <path d="M265.72,93.2c-.73,7.29-8.83,12.4-19.19,13.86,1.68,4.67,4.74,8.32,9.48,8.32,1.97,0,4.09-.51,5.84-1.31l.07.36c-4.6,5.84-12.4,11.31-14.52,11.31-7.95,0-15.25-5.03-15.1-15.54,0-14.01,10.94-25.39,24.8-25.39,3.5,0,9.19,2.41,8.61,8.39ZM251.93,93.5c0-3.28-.95-5.54-3.06-5.54-2.41,0-3.87,4.23-3.87,9.7,0,2.63.36,5.54,1.09,8.17,3.57-1.17,5.84-7.44,5.84-12.33Z"/>
+            <path d="M277.76,114.21h.07l6.06-2.84.22.51c-9.34,11.96-10.87,14.15-14.3,14.15-3.94,0-5.33-4.89-4.67-11.75l9.7-39.18-2.7-1.31.07-.44,17.73-5.33h.29l.15-.07v.15l-12.62,46.11Z"/>
+            <path d="M286.66,104.8c4.01-17.58,20.21-19.99,22.32-19.99,11.23,0,15.54,10.29,12.99,21.45-4.01,17.36-20.13,19.77-22.25,19.77-11.23,0-15.54-10.29-13.06-21.23ZM308.1,102.91c-1.82-11.67-4.01-15.9-6.49-14.66-2.55,1.24-2.92,7.22-1.24,19.62,1.6,11.67,4.16,16.05,6.71,14.66,2.48-1.31,2.48-7.22,1.02-19.62Z"/>
+            <path d="M350.2,89.26c-2.12,0-4.08-.22-5.98-.58l-7.44,25.83h.07l6.06-2.84.22.51c-9.34,11.96-10.87,14.15-14.3,14.15-3.94,0-5.33-4.89-4.67-11.75l6.57-25.02c-1.17-1.02-2.04-2.12-3.65-3.21v-.44h5.03c5.18-4.45,10.07-7.81,15.25-11.96h.29l-2.63,11.96h6.13l-.95,3.36Z"/>
+            <path d="M342.61,121.58l7.37-12.4h.58c1.9,4.81,9.78,12.99,15.17,12.99,1.17,0,1.31-.66,1.39-1.31-.07-1.6-2.99-4.67-5.4-6.86l-6.71-6.13c-2.63-2.41-4.45-5.11-4.38-9.12.22-7.73,6.2-13.79,17.66-13.79,5.98,0,9.85,2.19,10.5,2.63l-6.2,12.48h-.51c-1.46-4.38-7.73-12.55-11.96-12.55-1.24,0-1.75.51-1.75,1.46-.07,1.24,1.31,3.87,3.94,6.35l6.86,6.35c3.57,3.36,4.74,6.86,4.67,10.07-.07,8.1-8.24,14.23-17.8,14.23-6.49,0-11.16-2.33-13.42-4.38Z"/>
+            <path d="M411.04,93.2c-.73,7.29-8.83,12.4-19.19,13.86,1.68,4.67,4.74,8.32,9.48,8.32,1.97,0,4.09-.51,5.84-1.31l.07.36c-4.6,5.84-12.4,11.31-14.52,11.31-7.95,0-15.25-5.03-15.1-15.54,0-14.01,10.94-25.39,24.8-25.39,3.5,0,9.19,2.41,8.61,8.39ZM397.25,93.5c0-3.28-.95-5.54-3.06-5.54-2.41,0-3.87,4.23-3.87,9.7,0,2.63.36,5.54,1.09,8.17,3.57-1.17,5.84-7.44,5.84-12.33Z"/>
         </svg>
         <p class="onboarding-text" id="onboardingText">Zeigt dir,<br>was in deiner Nähe<br>gerade passiert.</p>
         <button class="onboarding-button" id="startButton" disabled>Lädt Karte...</button>
@@ -1097,20 +1186,20 @@
         <!-- Bottom Tabbar -->
         <nav class="tabbar" id="tabbar">
             <button class="tab-item active" id="tabHeute">
-                <span class="material-symbols-rounded">today</span>
-                <span>Heute</span>
+                <span class="material-symbols-rounded">radar</span>
+                <span>Radar</span>
             </button>
             <button class="tab-item" id="tabLaufend">
-                <span class="material-symbols-rounded">event_available</span>
-                <span>Laufend</span>
+                <span class="material-symbols-rounded">visibility</span>
+                <span>Horizont</span>
             </button>
             <button class="tab-item" id="tabOrte">
-                <span class="material-symbols-rounded">location_on</span>
-                <span>Orte</span>
+                <span class="material-symbols-rounded">anchor</span>
+                <span>Ankerplätze</span>
             </button>
             <button class="tab-item" id="tabGemerkt">
-                <span class="material-symbols-rounded">bookmark</span>
-                <span>Gemerkt</span>
+                <span class="material-symbols-rounded">auto_stories</span>
+                <span>Logbuch</span>
                 <span class="badge hidden" id="tabBadge">0</span>
             </button>
         </nav>
@@ -1309,9 +1398,8 @@
         </div>
     </div>
 
-    <!-- Leaflet JS -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.min.js"></script>
+    <!-- MapLibre GL JS -->
+    <script src="https://unpkg.com/maplibre-gl@4.1.2/dist/maplibre-gl.js"></script>
     
     <script>
     // =============================================
@@ -1335,7 +1423,7 @@
         textEl.innerHTML = randomMsg.text.replace(/\n/g, '<br>');
         
         function checkReady() {
-            if (typeof L !== 'undefined' && L.map) {
+            if (typeof maplibregl !== 'undefined') {
                 statusEl.textContent = '';
                 buttonEl.textContent = randomMsg.cta;
                 buttonEl.disabled = false;
@@ -1566,8 +1654,8 @@
     // =============================================
     
     var map = null;
-    var markerClusterGroup = null;
     var markersOnMap = [];
+    var userMarker = null;
     var userLat = 47.781;
     var userLng = 9.614;
     var activeFilters = [];
@@ -1603,86 +1691,77 @@
     function initializeMap() {
         var isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
         
-        map = L.map('map', {
-            zoomControl: false,
-            attributionControl: false,
+        // MapLibre style with grayscale raster tiles
+        var mapStyle = {
+            version: 8,
+            sources: {
+                'osm': {
+                    type: 'raster',
+                    tiles: [
+                        'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        'https://b.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        'https://c.tile.openstreetmap.org/{z}/{x}/{y}.png'
+                    ],
+                    tileSize: 256,
+                    attribution: '© OpenStreetMap'
+                }
+            },
+            layers: [{
+                id: 'osm-tiles',
+                type: 'raster',
+                source: 'osm',
+                paint: {
+                    'raster-saturation': -1,
+                    'raster-brightness-min': isDarkMode ? 0.0 : 0.1,
+                    'raster-brightness-max': isDarkMode ? 0.3 : 1.0,
+                    'raster-contrast': isDarkMode ? 0.3 : 0.1
+                }
+            }]
+        };
+        
+        map = new maplibregl.Map({
+            container: 'map',
+            style: mapStyle,
+            center: [userLng, userLat],
+            zoom: 10,
             minZoom: 9,
-            maxBounds: [[47.0, 8.5], [48.2, 10.2]],
-            maxBoundsViscosity: 1.0
-        }).setView([userLat, userLng], 10);
-        
-        // Try loading tiles
-        var tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            subdomains: ['a', 'b', 'c']
+            maxZoom: 18,
+            maxBounds: [[8.5, 47.0], [10.2, 48.2]],
+            attributionControl: false
         });
-        
-        tileLayer.on('tileerror', function(e) {
-            console.log('Tile loading error - network may be restricted');
-        });
-        
-        tileLayer.addTo(map);
-        
-        // Apply grayscale filter via CSS on the tile pane
-        var tilePane = map.getPane('tilePane');
-        if (tilePane) {
-            if (isDarkMode) {
-                tilePane.style.filter = 'grayscale(100%) invert(100%) brightness(0.6) contrast(1.2)';
-            } else {
-                tilePane.style.filter = 'grayscale(100%) brightness(1.1) contrast(0.9)';
-            }
-        }
         
         // Listen for dark mode changes
         window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
-            var pane = map.getPane('tilePane');
-            if (pane) {
-                if (e.matches) {
-                    pane.style.filter = 'grayscale(100%) invert(100%) brightness(0.6) contrast(1.2)';
-                } else {
-                    pane.style.filter = 'grayscale(100%) brightness(1.1) contrast(0.9)';
-                }
+            var dark = e.matches;
+            if (map.isStyleLoaded()) {
+                map.setPaintProperty('osm-tiles', 'raster-brightness-min', dark ? 0.0 : 0.1);
+                map.setPaintProperty('osm-tiles', 'raster-brightness-max', dark ? 0.3 : 1.0);
+                map.setPaintProperty('osm-tiles', 'raster-contrast', dark ? 0.3 : 0.1);
             }
         });
         
         // User marker
-        var userIcon = L.divIcon({
-            className: '',
-            html: '<div class="user-marker"></div>',
-            iconSize: [20, 20],
-            iconAnchor: [10, 10]
-        });
-        L.marker([userLat, userLng], { icon: userIcon, zIndexOffset: 1000 }).addTo(map);
+        var userMarkerEl = document.createElement('div');
+        userMarkerEl.className = 'user-marker';
+        userMarker = new maplibregl.Marker({ element: userMarkerEl })
+            .setLngLat([userLng, userLat])
+            .addTo(map);
         
-        // Marker cluster group
-        markerClusterGroup = L.markerClusterGroup({
-            showCoverageOnHover: false,
-            maxClusterRadius: 50,
-            spiderfyOnMaxZoom: false,
-            disableClusteringAtZoom: ZOOM_THRESHOLD,
-            iconCreateFunction: function(cluster) {
-                var count = cluster.getChildCount();
-                var size = count < 10 ? 36 : count < 50 ? 42 : 48;
-                var markerClass = currentNav === 'orte' ? 'venue-cluster-marker' : 'cluster-marker';
-                return L.divIcon({
-                    html: '<div class="' + markerClass + '" style="width:' + size + 'px;height:' + size + 'px;">' + count + '</div>',
-                    className: '',
-                    iconSize: [size, size],
-                    iconAnchor: [size/2, size/2]
-                });
-            }
+        map.on('load', function() {
+            currentZoom = map.getZoom();
+            buildClusterPills();
+            updateMarkers();
         });
-        map.addLayer(markerClusterGroup);
         
-        currentZoom = map.getZoom();
         map.on('zoomend', function() {
             currentZoom = map.getZoom();
             updateMarkers();
         });
         
-        buildClusterPills();
-        updateMarkers();
-        
+        setupEventHandlers();
+    }
+    
+    function setupEventHandlers() {
         // Event handlers
         document.getElementById('backdrop').onclick = closeSheet;
         document.getElementById('backdrop').addEventListener('touchend', function(e) { e.preventDefault(); closeSheet(); });
@@ -1767,6 +1846,14 @@
         var container = document.getElementById('clusterPills');
         container.innerHTML = '';
         
+        // Add search pill first
+        var searchPill = document.createElement('button');
+        searchPill.className = 'cluster-pill search-pill';
+        searchPill.id = 'pill-search';
+        searchPill.innerHTML = '<span class="material-symbols-rounded">search</span>';
+        searchPill.onclick = function() { openSearch(); };
+        container.appendChild(searchPill);
+        
         var keys = Object.keys(CLUSTERS);
         for (var i = 0; i < keys.length; i++) {
             var cluster = keys[i];
@@ -1783,6 +1870,133 @@
             })(cluster, pill);
             container.appendChild(pill);
         }
+    }
+    
+    var searchOverlayVisible = false;
+    
+    function openSearch() {
+        var overlay = document.getElementById('searchOverlay');
+        if (!overlay) {
+            // Create search overlay
+            overlay = document.createElement('div');
+            overlay.id = 'searchOverlay';
+            overlay.className = 'search-overlay';
+            overlay.innerHTML = 
+                '<div class="search-container">' +
+                    '<div class="search-header">' +
+                        '<span class="material-symbols-rounded search-icon">search</span>' +
+                        '<input type="text" id="searchInput" placeholder="Events, Orte, Künstler..." autocomplete="off">' +
+                        '<button class="search-close" id="searchClose"><span class="material-symbols-rounded">close</span></button>' +
+                    '</div>' +
+                    '<div class="search-results" id="searchResults"></div>' +
+                '</div>';
+            document.getElementById('app').appendChild(overlay);
+            
+            document.getElementById('searchClose').onclick = closeSearch;
+            document.getElementById('searchInput').oninput = function(e) {
+                performSearch(e.target.value);
+            };
+        }
+        
+        overlay.classList.add('visible');
+        searchOverlayVisible = true;
+        setTimeout(function() {
+            document.getElementById('searchInput').focus();
+        }, 100);
+    }
+    
+    function closeSearch() {
+        var overlay = document.getElementById('searchOverlay');
+        if (overlay) {
+            overlay.classList.remove('visible');
+            searchOverlayVisible = false;
+            document.getElementById('searchInput').value = '';
+            document.getElementById('searchResults').innerHTML = '';
+        }
+    }
+    
+    function performSearch(query) {
+        var results = document.getElementById('searchResults');
+        if (query.length < 2) {
+            results.innerHTML = '<div class="search-hint">Mindestens 2 Zeichen eingeben</div>';
+            return;
+        }
+        
+        var q = query.toLowerCase();
+        var matches = [];
+        
+        // Search events
+        for (var i = 0; i < EVENTS.length; i++) {
+            var ev = EVENTS[i];
+            if (ev.title.toLowerCase().indexOf(q) !== -1 || ev.venue.toLowerCase().indexOf(q) !== -1) {
+                matches.push({ type: 'event', data: ev });
+            }
+        }
+        
+        // Search venues
+        for (var v = 0; v < VENUES.length; v++) {
+            var ven = VENUES[v];
+            if (ven.name.toLowerCase().indexOf(q) !== -1) {
+                matches.push({ type: 'venue', data: ven });
+            }
+        }
+        
+        if (matches.length === 0) {
+            results.innerHTML = '<div class="search-empty"><span class="material-symbols-rounded">sailing</span><p>Hier herrscht Ebbe.<br>Keine Treffer gefunden.</p></div>';
+            return;
+        }
+        
+        var html = '';
+        for (var m = 0; m < Math.min(matches.length, 10); m++) {
+            var match = matches[m];
+            if (match.type === 'event') {
+                var dist = calcDistance(userLat, userLng, match.data.lat, match.data.lng);
+                var clusterData = CLUSTERS_HEUTE[match.data.cluster] || { icon: 'event' };
+                html += '<div class="search-result" data-type="event" data-index="' + EVENTS.indexOf(match.data) + '">' +
+                    '<span class="material-symbols-rounded">' + clusterData.icon + '</span>' +
+                    '<div class="search-result-content">' +
+                        '<div class="search-result-title">' + match.data.title + '</div>' +
+                        '<div class="search-result-sub">' + match.data.venue + '</div>' +
+                    '</div>' +
+                '</div>';
+            } else {
+                html += '<div class="search-result" data-type="venue" data-index="' + VENUES.indexOf(match.data) + '">' +
+                    '<span class="material-symbols-rounded">anchor</span>' +
+                    '<div class="search-result-content">' +
+                        '<div class="search-result-title">' + match.data.name + '</div>' +
+                        '<div class="search-result-sub">' + match.data.region + '</div>' +
+                    '</div>' +
+                '</div>';
+            }
+        }
+        
+        results.innerHTML = html;
+        
+        // Add click handlers
+        var items = results.querySelectorAll('.search-result');
+        items.forEach(function(item) {
+            item.onclick = function() {
+                var type = this.getAttribute('data-type');
+                var index = parseInt(this.getAttribute('data-index'));
+                closeSearch();
+                
+                if (type === 'event') {
+                    var ev = EVENTS[index];
+                    var dist = calcDistance(userLat, userLng, ev.lat, ev.lng);
+                    setNavMode('jetzt');
+                    setTimeout(function() {
+                        openSheet(ev, dist);
+                    }, 100);
+                } else {
+                    var ven = VENUES[index];
+                    var dist = calcDistance(userLat, userLng, ven.lat, ven.lng);
+                    setNavMode('orte');
+                    setTimeout(function() {
+                        openVenueSheet(ven, dist);
+                    }, 100);
+                }
+            };
+        });
     }
     
     function toggleFilter(cluster, pill) {
@@ -1835,7 +2049,10 @@
     
     function updateMarkers() {
         // Clear existing markers
-        markerClusterGroup.clearLayers();
+        for (var m = 0; m < markersOnMap.length; m++) {
+            markersOnMap[m].remove();
+        }
+        markersOnMap = [];
         
         var visibleCount = 0;
         var showIcons = currentZoom >= ZOOM_THRESHOLD;
@@ -1864,29 +2081,29 @@
                 visibleCount++;
                 var distance = calcDistance(userLat, userLng, venue.lat, venue.lng);
                 
+                var el = document.createElement('div');
                 var size = showIcons ? 32 : 12;
-                var markerHtml;
+                el.className = 'venue-marker';
+                el.style.width = size + 'px';
+                el.style.height = size + 'px';
+                
                 if (showIcons) {
-                    var iconName = CLUSTERS[venueFilter] ? CLUSTERS[venueFilter].icon : 'location_on';
-                    markerHtml = '<div class="venue-marker" style="width:' + size + 'px;height:' + size + 'px;"><span class="material-symbols-rounded" style="font-size:16px;">' + iconName + '</span></div>';
-                } else {
-                    markerHtml = '<div class="venue-marker" style="width:' + size + 'px;height:' + size + 'px;"></div>';
+                    var iconName = CLUSTERS[venueFilter] ? CLUSTERS[venueFilter].icon : 'anchor';
+                    el.innerHTML = '<span class="material-symbols-rounded" style="font-size:16px;">' + iconName + '</span>';
                 }
                 
-                var icon = L.divIcon({
-                    className: '',
-                    html: markerHtml,
-                    iconSize: [size, size],
-                    iconAnchor: [size/2, size/2]
-                });
+                var marker = new maplibregl.Marker({ element: el })
+                    .setLngLat([venue.lng, venue.lat])
+                    .addTo(map);
                 
-                var marker = L.marker([venue.lat, venue.lng], { icon: icon });
+                (function(ven, dist, markerEl) {
+                    markerEl.addEventListener('click', function(e) { 
+                        e.stopPropagation();
+                        openVenueSheet(ven, dist); 
+                    });
+                })(venue, distance, el);
                 
-                (function(ven, dist) {
-                    marker.on('click', function() { openVenueSheet(ven, dist); });
-                })(venue, distance);
-                
-                markerClusterGroup.addLayer(marker);
+                markersOnMap.push(marker);
             }
             return;
         }
@@ -1917,28 +2134,29 @@
                 visibleCount++;
                 var distance = calcDistance(userLat, userLng, event.lat, event.lng);
                 
+                var el = document.createElement('div');
                 var size = showIcons ? 36 : 12;
-                var markerHtml;
+                el.className = 'event-marker';
+                el.setAttribute('data-event-id', event.id);
+                el.style.width = size + 'px';
+                el.style.height = size + 'px';
+                
                 if (showIcons) {
-                    markerHtml = '<div class="event-marker" data-event-id="' + event.id + '" style="width:' + size + 'px;height:' + size + 'px;"><span class="material-symbols-rounded" style="font-size:18px;">' + CLUSTERS[event.cluster].icon + '</span></div>';
-                } else {
-                    markerHtml = '<div class="event-marker" data-event-id="' + event.id + '" style="width:' + size + 'px;height:' + size + 'px;"></div>';
+                    el.innerHTML = '<span class="material-symbols-rounded" style="font-size:18px;">' + CLUSTERS[event.cluster].icon + '</span>';
                 }
                 
-                var icon = L.divIcon({
-                    className: '',
-                    html: markerHtml,
-                    iconSize: [size, size],
-                    iconAnchor: [size/2, size/2]
-                });
+                var marker = new maplibregl.Marker({ element: el })
+                    .setLngLat([event.lng, event.lat])
+                    .addTo(map);
                 
-                var marker = L.marker([event.lat, event.lng], { icon: icon });
+                (function(ev, dist, markerEl) {
+                    markerEl.addEventListener('click', function(e) { 
+                        e.stopPropagation();
+                        openSheetLaufend(ev, dist); 
+                    });
+                })(event, distance, el);
                 
-                (function(ev, dist) {
-                    marker.on('click', function() { openSheetLaufend(ev, dist); });
-                })(event, distance);
-                
-                markerClusterGroup.addLayer(marker);
+                markersOnMap.push(marker);
             }
             
             for (var j = 0; j < keys.length; j++) {
@@ -1975,29 +2193,30 @@
             visibleCount++;
             var distance = calcDistance(userLat, userLng, event.lat, event.lng);
             
+            var el = document.createElement('div');
             var size = showIcons ? 36 : 12;
             var theaterClass = event.cluster === 'buehne' ? ' theater' : '';
-            var markerHtml;
+            el.className = 'event-marker' + theaterClass;
+            el.setAttribute('data-event-id', event.id);
+            el.style.width = size + 'px';
+            el.style.height = size + 'px';
+            
             if (showIcons) {
-                markerHtml = '<div class="event-marker' + theaterClass + '" data-event-id="' + event.id + '" style="width:' + size + 'px;height:' + size + 'px;"><span class="material-symbols-rounded" style="font-size:18px;">' + CLUSTERS[event.cluster].icon + '</span></div>';
-            } else {
-                markerHtml = '<div class="event-marker' + theaterClass + '" data-event-id="' + event.id + '" style="width:' + size + 'px;height:' + size + 'px;"></div>';
+                el.innerHTML = '<span class="material-symbols-rounded" style="font-size:18px;">' + CLUSTERS[event.cluster].icon + '</span>';
             }
             
-            var icon = L.divIcon({
-                className: '',
-                html: markerHtml,
-                iconSize: [size, size],
-                iconAnchor: [size/2, size/2]
-            });
+            var marker = new maplibregl.Marker({ element: el })
+                .setLngLat([event.lng, event.lat])
+                .addTo(map);
             
-            var marker = L.marker([event.lat, event.lng], { icon: icon });
+            (function(ev, dist, markerEl) {
+                markerEl.addEventListener('click', function(e) { 
+                    e.stopPropagation();
+                    openSheet(ev, dist); 
+                });
+            })(event, distance, el);
             
-            (function(ev, dist) {
-                marker.on('click', function() { openSheet(ev, dist); });
-            })(event, distance);
-            
-            markerClusterGroup.addLayer(marker);
+            markersOnMap.push(marker);
         }
         
         for (var j = 0; j < keys.length; j++) {
@@ -2048,14 +2267,18 @@
         
         // Center map on event - position pin in upper third (above overlay)
         if (map) {
-            var mapContainer = document.getElementById('map');
-            var mapHeight = mapContainer.offsetHeight;
-            // Move pin to upper third: pan map DOWN so pin appears higher
-            var offsetY = mapHeight * 0.3;
-            
-            map.setView([event.lat, event.lng], map.getZoom(), { animate: true });
+            // MapLibre uses [lng, lat] order
+            map.easeTo({
+                center: [event.lng, event.lat],
+                duration: 300
+            });
             setTimeout(function() {
-                if (map) map.panBy([0, -offsetY], { animate: true });
+                if (map) {
+                    var mapContainer = document.getElementById('map');
+                    var mapHeight = mapContainer.offsetHeight;
+                    var offsetY = mapHeight * 0.3;
+                    map.panBy([0, -offsetY], { duration: 300 });
+                }
             }, 150);
         }
         
@@ -2075,13 +2298,17 @@
         
         // Center map on event - position pin in upper third
         if (map) {
-            var mapContainer = document.getElementById('map');
-            var mapHeight = mapContainer.offsetHeight;
-            var offsetY = mapHeight * 0.3;
-            
-            map.setView([event.lat, event.lng], map.getZoom(), { animate: true });
+            map.easeTo({
+                center: [event.lng, event.lat],
+                duration: 300
+            });
             setTimeout(function() {
-                if (map) map.panBy([0, -offsetY], { animate: true });
+                if (map) {
+                    var mapContainer = document.getElementById('map');
+                    var mapHeight = mapContainer.offsetHeight;
+                    var offsetY = mapHeight * 0.3;
+                    map.panBy([0, -offsetY], { duration: 300 });
+                }
             }, 150);
         }
         
@@ -2155,13 +2382,17 @@
         
         // Center map on venue - position pin in upper third
         if (map) {
-            var mapContainer = document.getElementById('map');
-            var mapHeight = mapContainer.offsetHeight;
-            var offsetY = mapHeight * 0.3;
-            
-            map.setView([venue.lat, venue.lng], map.getZoom(), { animate: true });
+            map.easeTo({
+                center: [venue.lng, venue.lat],
+                duration: 300
+            });
             setTimeout(function() {
-                if (map) map.panBy([0, -offsetY], { animate: true });
+                if (map) {
+                    var mapContainer = document.getElementById('map');
+                    var mapHeight = mapContainer.offsetHeight;
+                    var offsetY = mapHeight * 0.3;
+                    map.panBy([0, -offsetY], { duration: 300 });
+                }
             }, 150);
         }
         
