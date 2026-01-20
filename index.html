@@ -108,7 +108,7 @@
             top: 0; left: 0; right: 0;
             z-index: 1000;
             background: linear-gradient(to bottom, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.8) 70%, transparent 100%);
-            padding-top: 15px;
+            padding-top: max(50px, env(safe-area-inset-top, 50px));
             padding-bottom: 20px;
         }
         @media (prefers-color-scheme: light) {
@@ -1718,11 +1718,11 @@
         map = new maplibregl.Map({
             container: 'map',
             style: mapStyle,
-            center: [userLng, userLat],
-            zoom: 10,
-            minZoom: 9,
+            center: [9.4, 47.55],
+            zoom: 8.5,
+            minZoom: 8,
             maxZoom: 18,
-            maxBounds: [[8.5, 47.0], [10.2, 48.2]],
+            maxBounds: [[7.5, 46.5], [11.0, 48.5]],
             attributionControl: false,
             dragRotate: false,
             touchZoomRotate: true,
@@ -1752,12 +1752,19 @@
         
         map.on('load', function() {
             currentZoom = map.getZoom();
+            
+            // Add 50km radius area around Lake Constance
+            addBodenseeRadius();
+            
             buildClusterPills();
             updateMarkersWithClusters();
         });
         
         // Re-add markers after style change (dark/light mode)
         map.on('style.load', function() {
+            // Re-add 50km radius mask
+            addBodenseeRadius();
+            
             // Re-add user marker
             if (userMarker) {
                 userMarker.addTo(map);
@@ -1776,6 +1783,66 @@
         });
         
         setupEventHandlers();
+    }
+    
+    function addBodenseeRadius() {
+        // Lake Constance (Bodensee) approximate shoreline coordinates
+        // This is a simplified polygon following the lake's shape
+        var lakeShore = [
+            [9.17, 47.81], [9.20, 47.80], [9.23, 47.77], [9.27, 47.75],
+            [9.33, 47.72], [9.37, 47.70], [9.42, 47.67], [9.48, 47.65],
+            [9.53, 47.63], [9.58, 47.62], [9.63, 47.60], [9.68, 47.58],
+            [9.72, 47.56], [9.74, 47.54], [9.73, 47.52], [9.70, 47.50],
+            [9.65, 47.49], [9.58, 47.48], [9.50, 47.48], [9.42, 47.50],
+            [9.35, 47.52], [9.28, 47.54], [9.22, 47.56], [9.18, 47.58],
+            [9.14, 47.60], [9.10, 47.62], [9.06, 47.64], [9.04, 47.66],
+            [9.03, 47.68], [9.04, 47.70], [9.06, 47.72], [9.08, 47.74],
+            [9.10, 47.76], [9.13, 47.78], [9.17, 47.81]
+        ];
+        
+        // Create 50km radius polygon by offsetting each point outward from center
+        var centerLng = 9.38;
+        var centerLat = 47.63;
+        var radiusKm = 50;
+        
+        // Generate expanded polygon (50km from lake center in all directions)
+        var expandedPolygon = [];
+        var numPoints = 64;
+        for (var i = 0; i < numPoints; i++) {
+            var angle = (i / numPoints) * 2 * Math.PI;
+            // Approximate: 1 degree lat = 111km, 1 degree lng = 111km * cos(lat)
+            var latOffset = (radiusKm / 111) * Math.sin(angle);
+            var lngOffset = (radiusKm / (111 * Math.cos(centerLat * Math.PI / 180))) * Math.cos(angle);
+            expandedPolygon.push([centerLng + lngOffset, centerLat + latOffset]);
+        }
+        expandedPolygon.push(expandedPolygon[0]); // Close the polygon
+        
+        // Create a large outer boundary (world bounds)
+        var worldBounds = [
+            [-180, -90], [-180, 90], [180, 90], [180, -90], [-180, -90]
+        ];
+        
+        // Add the mask layer (everything outside 50km radius is grayed out)
+        map.addSource('bodensee-mask', {
+            type: 'geojson',
+            data: {
+                type: 'Feature',
+                geometry: {
+                    type: 'Polygon',
+                    coordinates: [worldBounds, expandedPolygon]
+                }
+            }
+        });
+        
+        map.addLayer({
+            id: 'bodensee-mask-layer',
+            type: 'fill',
+            source: 'bodensee-mask',
+            paint: {
+                'fill-color': '#888888',
+                'fill-opacity': 0.4
+            }
+        }, 'poi_label'); // Insert below labels if they exist
     }
     
     function setupEventHandlers() {
@@ -2205,8 +2272,8 @@
         
         // Create supercluster index
         clusterIndex = new Supercluster({
-            radius: 60,
-            maxZoom: 16,
+            radius: 50,
+            maxZoom: 14,
             minZoom: 0
         });
         clusterIndex.load(dataPoints);
