@@ -1416,6 +1416,8 @@
 
     <!-- MapLibre GL JS -->
     <script src="https://unpkg.com/maplibre-gl@4.1.2/dist/maplibre-gl.js"></script>
+    <!-- Supercluster for marker clustering -->
+    <script src="https://unpkg.com/supercluster@8.0.1/dist/supercluster.min.js"></script>
     
     <script>
     // =============================================
@@ -1672,6 +1674,7 @@
     var map = null;
     var markersOnMap = [];
     var userMarker = null;
+    var clusterIndex = null;
     var userLat = 47.781;
     var userLng = 9.614;
     var activeFilters = [];
@@ -1720,8 +1723,17 @@
             minZoom: 9,
             maxZoom: 18,
             maxBounds: [[8.5, 47.0], [10.2, 48.2]],
-            attributionControl: false
+            attributionControl: false,
+            dragRotate: false,
+            touchZoomRotate: true,
+            touchPitch: false,
+            pitchWithRotate: false,
+            bearing: 0,
+            pitch: 0
         });
+        
+        // Disable rotation completely
+        map.touchZoomRotate.disableRotation();
         
         // Listen for dark mode changes
         window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
@@ -1741,7 +1753,7 @@
         map.on('load', function() {
             currentZoom = map.getZoom();
             buildClusterPills();
-            updateMarkers();
+            updateMarkersWithClusters();
         });
         
         // Re-add markers after style change (dark/light mode)
@@ -1751,12 +1763,16 @@
                 userMarker.addTo(map);
             }
             // Re-add all markers
-            updateMarkers();
+            updateMarkersWithClusters();
         });
         
         map.on('zoomend', function() {
             currentZoom = map.getZoom();
-            updateMarkers();
+            updateMarkersWithClusters();
+        });
+        
+        map.on('moveend', function() {
+            updateMarkersWithClusters();
         });
         
         setupEventHandlers();
@@ -2049,28 +2065,45 @@
     }
     
     function updateMarkers() {
+        // Legacy function - redirect to clustered version
+        updateMarkersWithClusters();
+    }
+    
+    function updateMarkersWithClusters() {
         // Clear existing markers
         for (var m = 0; m < markersOnMap.length; m++) {
             markersOnMap[m].remove();
         }
         markersOnMap = [];
         
-        var visibleCount = 0;
-        var showIcons = currentZoom >= ZOOM_THRESHOLD;
+        if (!map) return;
         
-        // "Orte" mode shows venues
+        var showIcons = currentZoom >= ZOOM_THRESHOLD;
+        var bounds = map.getBounds();
+        var bbox = [bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth()];
+        var zoom = Math.floor(map.getZoom());
+        
+        // Prepare data based on current mode
+        var dataPoints = [];
+        var clusterCounts = {};
+        var keys = Object.keys(CLUSTERS);
+        for (var k = 0; k < keys.length; k++) {
+            clusterCounts[keys[k]] = 0;
+        }
+        
+        var venueCategoryMap = {
+            'KULT': 'museen',
+            'MUS': 'buehnen',
+            'MICE': 'zentren',
+            'WORT': 'buehnen',
+            'GAST': 'zentren',
+            'SPORT': 'sport',
+            'FAM': 'zentren',
+            'EDU': 'museen'
+        };
+        
         if (currentNav === 'orte') {
-            var venueCategoryMap = {
-                'KULT': 'museen',
-                'MUS': 'buehnen',
-                'MICE': 'zentren',
-                'WORT': 'buehnen',
-                'GAST': 'zentren',
-                'SPORT': 'sport',
-                'FAM': 'zentren',
-                'EDU': 'museen'
-            };
-            
+            // Venues
             for (var v = 0; v < VENUES.length; v++) {
                 var venue = VENUES[v];
                 var venueFilter = venueCategoryMap[venue.category] || 'zentren';
@@ -2079,44 +2112,21 @@
                     continue;
                 }
                 
-                visibleCount++;
-                var distance = calcDistance(userLat, userLng, venue.lat, venue.lng);
-                
-                var el = document.createElement('div');
-                var size = showIcons ? 32 : 12;
-                el.className = 'venue-marker';
-                el.style.width = size + 'px';
-                el.style.height = size + 'px';
-                
-                if (showIcons) {
-                    var iconName = CLUSTERS[venueFilter] ? CLUSTERS[venueFilter].icon : 'anchor';
-                    el.innerHTML = '<span class="material-symbols-rounded" style="font-size:16px;">' + iconName + '</span>';
-                }
-                
-                var marker = new maplibregl.Marker({ element: el })
-                    .setLngLat([venue.lng, venue.lat])
-                    .addTo(map);
-                
-                (function(ven, dist, markerEl) {
-                    markerEl.addEventListener('click', function(e) { 
-                        e.stopPropagation();
-                        openVenueSheet(ven, dist); 
-                    });
-                })(venue, distance, el);
-                
-                markersOnMap.push(marker);
+                dataPoints.push({
+                    type: 'Feature',
+                    properties: {
+                        type: 'venue',
+                        index: v,
+                        cluster: venueFilter
+                    },
+                    geometry: {
+                        type: 'Point',
+                        coordinates: [venue.lng, venue.lat]
+                    }
+                });
             }
-            return;
-        }
-        
-        // "Laufend" mode shows EVENTS_LAUFEND
-        if (currentNav === 'laeuft') {
-            var clusterCounts = {};
-            var keys = Object.keys(CLUSTERS);
-            for (var k = 0; k < keys.length; k++) {
-                clusterCounts[keys[k]] = 0;
-            }
-            
+        } else if (currentNav === 'laeuft') {
+            // Laufend events
             for (var i = 0; i < EVENTS_LAUFEND.length; i++) {
                 var event = EVENTS_LAUFEND[i];
                 
@@ -2132,98 +2142,186 @@
                     continue;
                 }
                 
-                visibleCount++;
-                var distance = calcDistance(userLat, userLng, event.lat, event.lng);
-                
-                var el = document.createElement('div');
-                var size = showIcons ? 36 : 12;
-                el.className = 'event-marker';
-                el.setAttribute('data-event-id', event.id);
-                el.style.width = size + 'px';
-                el.style.height = size + 'px';
-                
-                if (showIcons) {
-                    el.innerHTML = '<span class="material-symbols-rounded" style="font-size:18px;">' + CLUSTERS[event.cluster].icon + '</span>';
-                }
-                
-                var marker = new maplibregl.Marker({ element: el })
-                    .setLngLat([event.lng, event.lat])
-                    .addTo(map);
-                
-                (function(ev, dist, markerEl) {
-                    markerEl.addEventListener('click', function(e) { 
-                        e.stopPropagation();
-                        openSheetLaufend(ev, dist); 
-                    });
-                })(event, distance, el);
-                
-                markersOnMap.push(marker);
+                dataPoints.push({
+                    type: 'Feature',
+                    properties: {
+                        type: 'laufend',
+                        index: i,
+                        cluster: event.cluster
+                    },
+                    geometry: {
+                        type: 'Point',
+                        coordinates: [event.lng, event.lat]
+                    }
+                });
             }
             
+            // Update counts
             for (var j = 0; j < keys.length; j++) {
                 var countEl = document.getElementById('count-' + keys[j]);
                 if (countEl) {
                     countEl.textContent = '(' + (clusterCounts[keys[j]] || 0) + ')';
                 }
             }
-            return;
-        }
-        
-        // "Heute" mode shows EVENTS
-        var clusterCounts = {};
-        var keys = Object.keys(CLUSTERS);
-        for (var k = 0; k < keys.length; k++) {
-            clusterCounts[keys[k]] = 0;
-        }
-        
-        for (var i = 0; i < EVENTS.length; i++) {
-            var event = EVENTS[i];
-            
-            if (CLUSTERS[event.cluster]) {
-                clusterCounts[event.cluster]++;
-            }
-            
-            if (activeFilters.length > 0 && activeFilters.indexOf(event.cluster) === -1) {
-                continue;
-            }
-            
-            if (!CLUSTERS[event.cluster]) {
-                continue;
-            }
-            
-            visibleCount++;
-            var distance = calcDistance(userLat, userLng, event.lat, event.lng);
-            
-            var el = document.createElement('div');
-            var size = showIcons ? 36 : 12;
-            var theaterClass = event.cluster === 'buehne' ? ' theater' : '';
-            el.className = 'event-marker' + theaterClass;
-            el.setAttribute('data-event-id', event.id);
-            el.style.width = size + 'px';
-            el.style.height = size + 'px';
-            
-            if (showIcons) {
-                el.innerHTML = '<span class="material-symbols-rounded" style="font-size:18px;">' + CLUSTERS[event.cluster].icon + '</span>';
-            }
-            
-            var marker = new maplibregl.Marker({ element: el })
-                .setLngLat([event.lng, event.lat])
-                .addTo(map);
-            
-            (function(ev, dist, markerEl) {
-                markerEl.addEventListener('click', function(e) { 
-                    e.stopPropagation();
-                    openSheet(ev, dist); 
+        } else {
+            // Heute events
+            for (var i = 0; i < EVENTS.length; i++) {
+                var event = EVENTS[i];
+                
+                if (CLUSTERS[event.cluster]) {
+                    clusterCounts[event.cluster]++;
+                }
+                
+                if (activeFilters.length > 0 && activeFilters.indexOf(event.cluster) === -1) {
+                    continue;
+                }
+                
+                if (!CLUSTERS[event.cluster]) {
+                    continue;
+                }
+                
+                dataPoints.push({
+                    type: 'Feature',
+                    properties: {
+                        type: 'event',
+                        index: i,
+                        cluster: event.cluster
+                    },
+                    geometry: {
+                        type: 'Point',
+                        coordinates: [event.lng, event.lat]
+                    }
                 });
-            })(event, distance, el);
+            }
             
-            markersOnMap.push(marker);
+            // Update counts
+            for (var j = 0; j < keys.length; j++) {
+                var countEl = document.getElementById('count-' + keys[j]);
+                if (countEl) {
+                    countEl.textContent = '(' + (clusterCounts[keys[j]] || 0) + ')';
+                }
+            }
         }
         
-        for (var j = 0; j < keys.length; j++) {
-            var countEl = document.getElementById('count-' + keys[j]);
-            if (countEl) {
-                countEl.textContent = '(' + (clusterCounts[keys[j]] || 0) + ')';
+        // Create supercluster index
+        clusterIndex = new Supercluster({
+            radius: 60,
+            maxZoom: 16,
+            minZoom: 0
+        });
+        clusterIndex.load(dataPoints);
+        
+        // Get clusters for current view
+        var clusters = clusterIndex.getClusters(bbox, zoom);
+        
+        // Render clusters and points
+        for (var c = 0; c < clusters.length; c++) {
+            var feature = clusters[c];
+            var coords = feature.geometry.coordinates;
+            
+            if (feature.properties.cluster) {
+                // It's a cluster
+                var count = feature.properties.point_count;
+                var clusterId = feature.properties.cluster_id;
+                
+                var el = document.createElement('div');
+                var size = count < 10 ? 36 : count < 50 ? 42 : 48;
+                el.className = currentNav === 'orte' ? 'venue-cluster-marker' : 'cluster-marker';
+                el.style.width = size + 'px';
+                el.style.height = size + 'px';
+                el.textContent = count;
+                
+                var marker = new maplibregl.Marker({ element: el })
+                    .setLngLat(coords)
+                    .addTo(map);
+                
+                (function(cId, coord) {
+                    el.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        // Zoom into cluster
+                        var expansionZoom = clusterIndex.getClusterExpansionZoom(cId);
+                        map.easeTo({
+                            center: coord,
+                            zoom: Math.min(expansionZoom, 16),
+                            duration: 500
+                        });
+                    });
+                })(clusterId, coords);
+                
+                markersOnMap.push(marker);
+            } else {
+                // It's a single point
+                var props = feature.properties;
+                var el = document.createElement('div');
+                
+                if (props.type === 'venue') {
+                    var venue = VENUES[props.index];
+                    var distance = calcDistance(userLat, userLng, venue.lat, venue.lng);
+                    var size = showIcons ? 32 : 12;
+                    el.className = 'venue-marker';
+                    el.style.width = size + 'px';
+                    el.style.height = size + 'px';
+                    
+                    if (showIcons) {
+                        var iconName = CLUSTERS[props.cluster] ? CLUSTERS[props.cluster].icon : 'anchor';
+                        el.innerHTML = '<span class="material-symbols-rounded" style="font-size:16px;">' + iconName + '</span>';
+                    }
+                    
+                    (function(ven, dist, markerEl) {
+                        markerEl.addEventListener('click', function(e) { 
+                            e.stopPropagation();
+                            openVenueSheet(ven, dist); 
+                        });
+                    })(venue, distance, el);
+                    
+                } else if (props.type === 'laufend') {
+                    var event = EVENTS_LAUFEND[props.index];
+                    var distance = calcDistance(userLat, userLng, event.lat, event.lng);
+                    var size = showIcons ? 36 : 12;
+                    el.className = 'event-marker';
+                    el.setAttribute('data-event-id', event.id);
+                    el.style.width = size + 'px';
+                    el.style.height = size + 'px';
+                    
+                    if (showIcons && CLUSTERS[event.cluster]) {
+                        el.innerHTML = '<span class="material-symbols-rounded" style="font-size:18px;">' + CLUSTERS[event.cluster].icon + '</span>';
+                    }
+                    
+                    (function(ev, dist, markerEl) {
+                        markerEl.addEventListener('click', function(e) { 
+                            e.stopPropagation();
+                            openSheetLaufend(ev, dist); 
+                        });
+                    })(event, distance, el);
+                    
+                } else {
+                    // Regular event
+                    var event = EVENTS[props.index];
+                    var distance = calcDistance(userLat, userLng, event.lat, event.lng);
+                    var size = showIcons ? 36 : 12;
+                    var theaterClass = event.cluster === 'buehne' ? ' theater' : '';
+                    el.className = 'event-marker' + theaterClass;
+                    el.setAttribute('data-event-id', event.id);
+                    el.style.width = size + 'px';
+                    el.style.height = size + 'px';
+                    
+                    if (showIcons && CLUSTERS[event.cluster]) {
+                        el.innerHTML = '<span class="material-symbols-rounded" style="font-size:18px;">' + CLUSTERS[event.cluster].icon + '</span>';
+                    }
+                    
+                    (function(ev, dist, markerEl) {
+                        markerEl.addEventListener('click', function(e) { 
+                            e.stopPropagation();
+                            openSheet(ev, dist); 
+                        });
+                    })(event, distance, el);
+                }
+                
+                var marker = new maplibregl.Marker({ element: el })
+                    .setLngLat(coords)
+                    .addTo(map);
+                
+                markersOnMap.push(marker);
             }
         }
     }
