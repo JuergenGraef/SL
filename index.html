@@ -102,52 +102,79 @@
         }
         .maplibregl-canvas { outline: none; }
         
-        /* Header - Filter Pills only */
-        .header-container {
-            position: absolute;
+        /* Main Header with Logo and Logbuch */
+        .main-header {
+            position: fixed;
             top: 0; left: 0; right: 0;
-            z-index: 1000;
-            background: linear-gradient(to bottom, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.8) 70%, transparent 100%);
-            padding-top: max(50px, env(safe-area-inset-top, 50px));
-            padding-bottom: 20px;
+            z-index: 1001;
+            background: var(--bg);
+            padding-top: max(12px, env(safe-area-inset-top, 12px));
+            padding-bottom: 8px;
+            padding-left: 16px;
+            padding-right: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-        @media (prefers-color-scheme: light) {
-            .header-container { background: linear-gradient(to bottom, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0.85) 70%, transparent 100%); }
+        .header-logo svg {
+            height: 28px;
+            width: auto;
+        }
+        .header-logo svg path { fill: var(--text); }
+        .header-logbuch-btn {
+            background: transparent;
+            border: none;
+            padding: 8px;
+            cursor: pointer;
+            color: var(--text);
+            position: relative;
+        }
+        .header-logbuch-btn .material-symbols-rounded { font-size: 28px; }
+        .logbuch-badge {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            min-width: 16px;
+            height: 16px;
+            background: var(--text);
+            color: var(--bg);
+            border-radius: 8px;
+            font-size: 10px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 4px;
+        }
+        .logbuch-badge.hidden { display: none; }
+        
+        /* Header - Filter Pills below main header */
+        .header-container {
+            position: fixed;
+            top: calc(max(12px, env(safe-area-inset-top, 12px)) + 52px);
+            left: 0; right: 0;
+            z-index: 1000;
+            background: linear-gradient(to bottom, var(--bg) 0%, var(--bg) 50%, transparent 100%);
+            padding-top: 0;
+            padding-bottom: 20px;
         }
         
         /* Hide old top-bar elements */
         .top-bar { display: none; }
         .bookmarks-btn { display: none; }
         
-        /* Bottom Tabbar - Flat Design, transparent safe area */
+        /* Bottom Tabbar - Flat Design, no gap */
         .tabbar {
-            position: absolute;
+            position: fixed;
             bottom: 0; left: 0; right: 0;
             z-index: 1000;
-            background-color: transparent;
-            background-image: none;
-            border: none;
-            border-top: none;
-            padding-bottom: 0;
+            background: var(--bg);
             display: flex;
             justify-content: space-around;
-            align-items: stretch;
-            box-shadow: none;
-        }
-        .tabbar::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; right: 0;
-            bottom: env(safe-area-inset-bottom, 0);
-            background: var(--bg);
-            z-index: -1;
-        }
-        .tabbar::after {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; right: 0;
-            height: 1px;
-            background: rgba(128,128,128,0.15);
+            align-items: flex-start;
+            padding-top: 8px;
+            padding-bottom: calc(8px + env(safe-area-inset-bottom, 0));
+            border-top: 1px solid rgba(128,128,128,0.15);
         }
         .tab-item {
             flex: 1;
@@ -155,8 +182,7 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 13px 0;
-            padding-bottom: calc(15px + env(safe-area-inset-bottom, 0));
+            padding: 4px 0;
             background: transparent;
             border: none;
             color: var(--text-secondary);
@@ -1162,18 +1188,28 @@
 <body>
     <!-- Onboarding -->
     <div id="onboarding">
-        <svg class="onboarding-logo" viewBox="0 0 600 200" xmlns="http://www.w3.org/2000/svg">
-            <path d="M201.15,74.97h.36l-5.33,21.01h-.36c-6.05-11.16-15.03-17.8-21.3-17.8-2.12,0-3.28.73-3.57,1.75-.73,2.63,3.43,6.86,9.7,11.45l8.1,5.98c5.62,4.16,7.59,8.54,6.13,14.37-1.75,7.22-9.63,14.3-22.1,14.3-6.86,0-12.55-2.12-18.75-3.06l4.6-22.76h.36c6.42,17.29,19.11,21.89,24.07,21.89,2.26,0,3.06-.73,3.06-2.19,0-2.48-3.14-6.05-8.83-10.43l-7.73-5.98c-5.91-4.52-7.95-9.12-6.35-15.54,2.41-9.85,11.31-13.13,20.21-13.13,4.74,0,9.05,1.17,11.82,3.06l5.91-2.92Z"/>
-            <path d="M232.89,93.2c-.73,7.29-8.83,12.4-19.19,13.86,1.68,4.67,4.74,8.32,9.48,8.32,1.97,0,4.09-.51,5.84-1.31l.07.36c-4.6,5.84-12.4,11.31-14.52,11.31-7.95,0-15.25-5.03-15.1-15.54,0-14.01,10.94-25.39,24.8-25.39,3.5,0,9.19,2.41,8.61,8.39ZM219.1,93.5c0-3.28-.95-5.54-3.06-5.54-2.41,0-3.87,4.23-3.87,9.7,0,2.63.36,5.54,1.09,8.17,3.57-1.17,5.84-7.44,5.84-12.33Z"/>
-            <path d="M265.72,93.2c-.73,7.29-8.83,12.4-19.19,13.86,1.68,4.67,4.74,8.32,9.48,8.32,1.97,0,4.09-.51,5.84-1.31l.07.36c-4.6,5.84-12.4,11.31-14.52,11.31-7.95,0-15.25-5.03-15.1-15.54,0-14.01,10.94-25.39,24.8-25.39,3.5,0,9.19,2.41,8.61,8.39ZM251.93,93.5c0-3.28-.95-5.54-3.06-5.54-2.41,0-3.87,4.23-3.87,9.7,0,2.63.36,5.54,1.09,8.17,3.57-1.17,5.84-7.44,5.84-12.33Z"/>
-            <path d="M277.76,114.21h.07l6.06-2.84.22.51c-9.34,11.96-10.87,14.15-14.3,14.15-3.94,0-5.33-4.89-4.67-11.75l9.7-39.18-2.7-1.31.07-.44,17.73-5.33h.29l.15-.07v.15l-12.62,46.11Z"/>
-            <path d="M286.66,104.8c4.01-17.58,20.21-19.99,22.32-19.99,11.23,0,15.54,10.29,12.99,21.45-4.01,17.36-20.13,19.77-22.25,19.77-11.23,0-15.54-10.29-13.06-21.23ZM308.1,102.91c-1.82-11.67-4.01-15.9-6.49-14.66-2.55,1.24-2.92,7.22-1.24,19.62,1.6,11.67,4.16,16.05,6.71,14.66,2.48-1.31,2.48-7.22,1.02-19.62Z"/>
-            <path d="M350.2,89.26c-2.12,0-4.08-.22-5.98-.58l-7.44,25.83h.07l6.06-2.84.22.51c-9.34,11.96-10.87,14.15-14.3,14.15-3.94,0-5.33-4.89-4.67-11.75l6.57-25.02c-1.17-1.02-2.04-2.12-3.65-3.21v-.44h5.03c5.18-4.45,10.07-7.81,15.25-11.96h.29l-2.63,11.96h6.13l-.95,3.36Z"/>
-            <path d="M342.61,121.58l7.37-12.4h.58c1.9,4.81,9.78,12.99,15.17,12.99,1.17,0,1.31-.66,1.39-1.31-.07-1.6-2.99-4.67-5.4-6.86l-6.71-6.13c-2.63-2.41-4.45-5.11-4.38-9.12.22-7.73,6.2-13.79,17.66-13.79,5.98,0,9.85,2.19,10.5,2.63l-6.2,12.48h-.51c-1.46-4.38-7.73-12.55-11.96-12.55-1.24,0-1.75.51-1.75,1.46-.07,1.24,1.31,3.87,3.94,6.35l6.86,6.35c3.57,3.36,4.74,6.86,4.67,10.07-.07,8.1-8.24,14.23-17.8,14.23-6.49,0-11.16-2.33-13.42-4.38Z"/>
-            <path d="M411.04,93.2c-.73,7.29-8.83,12.4-19.19,13.86,1.68,4.67,4.74,8.32,9.48,8.32,1.97,0,4.09-.51,5.84-1.31l.07.36c-4.6,5.84-12.4,11.31-14.52,11.31-7.95,0-15.25-5.03-15.1-15.54,0-14.01,10.94-25.39,24.8-25.39,3.5,0,9.19,2.41,8.61,8.39ZM397.25,93.5c0-3.28-.95-5.54-3.06-5.54-2.41,0-3.87,4.23-3.87,9.7,0,2.63.36,5.54,1.09,8.17,3.57-1.17,5.84-7.44,5.84-12.33Z"/>
+        <svg class="onboarding-logo" viewBox="0 0 404 364.87" xmlns="http://www.w3.org/2000/svg">
+            <g>
+                <path d="M100.79,278.8h.45l-6.62,26.13h-.45c-7.53-13.88-18.69-22.13-26.49-22.13-2.63,0-4.08.91-4.44,2.18-.91,3.27,4.26,8.53,12.06,14.24l10.07,7.44c6.98,5.17,9.43,10.61,7.62,17.87-2.18,8.98-11.97,17.78-27.49,17.78-8.53,0-15.6-2.63-23.31-3.81l5.71-28.3h.45c7.98,21.5,23.77,27.21,29.93,27.21,2.81,0,3.81-.91,3.81-2.72,0-3.08-3.9-7.53-10.98-12.97l-9.62-7.44c-7.35-5.62-9.89-11.34-7.89-19.32,2.99-12.25,14.06-16.33,25.13-16.33,5.9,0,11.25,1.45,14.7,3.81l7.35-3.63Z"/>
+                <path d="M140.25,301.48c-.91,9.07-10.98,15.42-23.86,17.23,2.09,5.81,5.9,10.34,11.79,10.34,2.45,0,5.08-.64,7.26-1.63l.09.45c-5.71,7.26-15.42,14.06-18.05,14.06-9.89,0-18.96-6.26-18.78-19.32,0-17.42,13.61-31.57,30.84-31.57,4.35,0,11.43,2.99,10.7,10.43ZM123.1,301.85c0-4.08-1.18-6.89-3.81-6.89-2.99,0-4.81,5.26-4.81,12.07,0,3.27.45,6.89,1.36,10.16,4.44-1.45,7.26-9.25,7.26-15.33Z"/>
+                <path d="M181.07,301.48c-.91,9.07-10.98,15.42-23.86,17.23,2.09,5.81,5.9,10.34,11.79,10.34,2.45,0,5.08-.64,7.26-1.63l.09.45c-5.71,7.26-15.42,14.06-18.05,14.06-9.89,0-18.96-6.26-18.78-19.32,0-17.42,13.61-31.57,30.84-31.57,4.35,0,11.43,2.99,10.7,10.43ZM163.92,301.85c0-4.08-1.18-6.89-3.81-6.89-2.99,0-4.81,5.26-4.81,12.07,0,3.27.45,6.89,1.36,10.16,4.44-1.45,7.26-9.25,7.26-15.33Z"/>
+                <path d="M196.03,327.61h.09l7.53-3.54.27.64c-11.61,14.88-13.52,17.6-17.78,17.6-4.9,0-6.62-6.08-5.81-14.6l12.06-48.71-3.36-1.63.09-.55,22.04-6.62h.36l.18-.09v.18l-15.69,57.33Z"/>
+                <path d="M207.1,315.91c4.99-21.86,25.13-24.86,27.76-24.86,13.97,0,19.32,12.79,16.15,26.67-4.99,21.59-25.04,24.58-27.67,24.58-13.97,0-19.32-12.79-16.24-26.4ZM233.77,313.55c-2.27-14.51-4.99-19.77-8.07-18.23-3.18,1.54-3.63,8.98-1.54,24.4,2,14.51,5.17,19.96,8.34,18.23,3.08-1.63,3.08-8.98,1.27-24.4Z"/>
+                <path d="M286.11,296.58c-2.63,0-5.08-.27-7.44-.73l-9.25,32.11h.09l7.53-3.54.27.64c-11.61,14.88-13.52,17.6-17.78,17.6-4.9,0-6.62-6.08-5.81-14.6l8.16-31.12c-1.45-1.27-2.54-2.63-4.54-3.99v-.55h6.26c6.44-5.53,12.52-9.71,18.96-14.88h.36l-3.27,14.88h7.62l-1.18,4.17Z"/>
+                <path d="M276.68,336.77l9.16-15.42h.73c2.36,5.99,12.16,16.15,18.87,16.15,1.45,0,1.63-.82,1.72-1.63-.09-2-3.72-5.81-6.71-8.53l-8.34-7.62c-3.27-2.99-5.53-6.35-5.44-11.34.27-9.61,7.71-17.14,21.95-17.14,7.44,0,12.24,2.72,13.06,3.27l-7.71,15.51h-.64c-1.81-5.44-9.61-15.6-14.88-15.6-1.54,0-2.18.64-2.18,1.81-.09,1.54,1.63,4.81,4.9,7.89l8.53,7.89c4.44,4.17,5.9,8.53,5.81,12.52-.09,10.07-10.25,17.69-22.13,17.69-8.07,0-13.88-2.9-16.69-5.44Z"/>
+                <path d="M361.76,301.48c-.91,9.07-10.98,15.42-23.86,17.23,2.09,5.81,5.9,10.34,11.79,10.34,2.45,0,5.08-.64,7.26-1.63l.09.45c-5.71,7.26-15.42,14.06-18.05,14.06-9.89,0-18.96-6.26-18.78-19.32,0-17.42,13.61-31.57,30.84-31.57,4.35,0,11.43,2.99,10.7,10.43ZM344.62,301.85c0-4.08-1.18-6.89-3.81-6.89-2.99,0-4.81,5.26-4.81,12.07,0,3.27.45,6.89,1.36,10.16,4.44-1.45,7.26-9.25,7.26-15.33Z"/>
+            </g>
+            <g style="opacity:.5">
+                <path d="M215.93,231.68h-27.85c-1.65,0-2.98,1.34-2.98,2.98s1.34,2.98,2.98,2.98h27.85c1.65,0,2.98-1.34,2.98-2.98s-1.34-2.98-2.98-2.98Z"/>
+                <path d="M256.7,207.81h-12.93c-1.65,0-2.98-1.34-2.98-2.98s1.34-2.98,2.98-2.98h8.61c1.65,0,2.98-1.34,2.98-2.98s-1.34-2.98-3-2.98h-99.55c-1.63,0-2.96,1.34-2.96,2.98s1.34,2.98,2.98,2.98h7.4c1.65,0,2.98,1.34,2.98,2.98s-1.34,2.98-2.98,2.98h-12.93c-1.65,0-2.98,1.34-2.98,2.98s1.34,2.98,2.98,2.98h33.81c1.65,0,2.98,1.34,2.98,2.98h0c0,1.65-1.34,2.98-2.98,2.98h-12.93c-1.65,0-2.98,1.34-2.98,2.98h0c0,1.65,1.34,2.98,2.98,2.98h67.63c1.65,0,2.98-1.34,2.98-2.98h0c0-1.65-1.34-2.98-2.98-2.98h-12.93c-1.65,0-2.98-1.34-2.98-2.98h0c0-1.65,1.34-2.98,2.98-2.98h33.81c1.65,0,2.98-1.34,2.98-2.98h0c0-1.65-1.34-2.98-2.98-2.98Z"/>
+            </g>
+            <path d="M278.58,195.88h-33.81l-4.28-14.04c-.45-1.58-2.16-2.87-3.8-2.87h-69.62c-1.64,0-3.33,1.3-3.76,2.88l-4.07,14.03h-33.81c-1.65,0-2.98,1.34-2.98,2.98s1.34,2.98,2.98,2.98h153.16c1.65,0,2.98-1.34,2.98-2.98s-1.34-2.98-2.98-2.98ZM168.65,184.94h66.51l3.4,10.94h-73.14l3.23-10.94Z"/>
+            <path d="M221.89,78.52h-4.99v-14.92h-5.97v14.92h-5.95v-14.92h-5.97v14.92h-5.99v-14.92h-5.97v14.92h-4.95c-1.65,0-2.98,1.34-2.98,2.98h0c0,1.65,1.34,2.98,2.98,2.98h39.78c1.65,0,2.98-1.34,2.98-2.98h0c0-1.65-1.34-2.98-2.98-2.98Z"/>
+            <path d="M219.9,52.67h-2.98c-.99-11.94-11.49-13.84-11.93-13.92v-17.91c0-1.65-1.34-2.98-2.98-2.98s-2.98,1.34-2.98,2.98c0,0-.02,17.9-.02,17.9,0,0-10.92,1.99-11.91,13.93h-2.98c-1.65,0-2.98,1.34-2.98,2.98s1.34,2.98,2.98,2.98h35.8c1.65,0,2.98-1.34,2.98-2.98s-1.34-2.98-2.98-2.98Z"/>
+            <path d="M216.92,90.46h-5.97s0,0,0,0l-18.97,15.81,1.07-15.81h-5.97l-5.97,88.51h5.97l28.25-23.54,1.59,23.54h5.97l-5.97-88.51ZM188.72,154.74l1.63-24.24,22.06-18.38,1.46,21.66-25.15,20.96Z"/>
         </svg>
-        <p class="onboarding-text" id="onboardingText">Zeigt dir,<br>was in deiner Nähe<br>gerade passiert.</p>
-        <button class="onboarding-button" id="startButton" disabled>Lädt Karte...</button>
+        <p class="onboarding-text" id="onboardingText"></p>
+        <button class="onboarding-button" id="startButton" disabled>Lädt...</button>
         <div id="loadingStatus"></div>
     </div>
     
@@ -1181,7 +1217,29 @@
     <div id="app">
         <div id="map"></div>
         
-        <!-- Header with Filters only -->
+        <!-- Main Header with Logo and Logbuch -->
+        <div class="main-header" id="mainHeader">
+            <div class="header-logo" id="headerLogo">
+                <svg viewBox="0 0 127.02 63.61" xmlns="http://www.w3.org/2000/svg">
+                    <g>
+                        <path d="M36.48,22.44h.12l-1.77,6.98h-.12c-2.01-3.71-4.99-5.91-7.07-5.91-.7,0-1.09.24-1.19.58-.24.87,1.14,2.28,3.22,3.8l2.69,1.99c1.87,1.38,2.52,2.83,2.03,4.77-.58,2.4-3.2,4.75-7.34,4.75-2.28,0-4.17-.7-6.23-1.02l1.53-7.56h.12c2.13,5.74,6.35,7.27,7.99,7.27.75,0,1.02-.24,1.02-.73,0-.82-1.04-2.01-2.93-3.46l-2.57-1.99c-1.96-1.5-2.64-3.03-2.11-5.16.8-3.27,3.75-4.36,6.71-4.36,1.57,0,3,.39,3.92,1.02l1.96-.97Z"/>
+                        <path d="M47.02,28.5c-.24,2.42-2.93,4.12-6.37,4.6.56,1.55,1.57,2.76,3.15,2.76.65,0,1.36-.17,1.94-.44l.02.12c-1.53,1.94-4.12,3.75-4.82,3.75-2.64,0-5.06-1.67-5.01-5.16,0-4.65,3.63-8.43,8.24-8.43,1.16,0,3.05.8,2.86,2.79ZM42.44,28.59c0-1.09-.32-1.84-1.02-1.84-.8,0-1.28,1.41-1.28,3.22,0,.87.12,1.84.36,2.71,1.19-.39,1.94-2.47,1.94-4.09Z"/>
+                        <path d="M57.92,28.5c-.24,2.42-2.93,4.12-6.37,4.6.56,1.55,1.57,2.76,3.15,2.76.65,0,1.36-.17,1.94-.44l.02.12c-1.53,1.94-4.12,3.75-4.82,3.75-2.64,0-5.06-1.67-5.01-5.16,0-4.65,3.63-8.43,8.24-8.43,1.16,0,3.05.8,2.86,2.79ZM53.34,28.59c0-1.09-.32-1.84-1.02-1.84-.8,0-1.28,1.41-1.28,3.22,0,.87.12,1.84.36,2.71,1.19-.39,1.94-2.47,1.94-4.09Z"/>
+                        <path d="M61.91,35.47h.02l2.01-.94.07.17c-3.1,3.97-3.61,4.7-4.75,4.7-1.31,0-1.77-1.62-1.55-3.9l3.22-13.01-.9-.44.02-.15,5.89-1.77h.1l.05-.02v.05l-4.19,15.31Z"/>
+                        <path d="M64.87,32.35c1.33-5.84,6.71-6.64,7.41-6.64,3.73,0,5.16,3.42,4.31,7.12-1.33,5.77-6.69,6.56-7.39,6.56-3.73,0-5.16-3.42-4.34-7.05ZM71.99,31.72c-.61-3.88-1.33-5.28-2.16-4.87-.85.41-.97,2.4-.41,6.52.53,3.88,1.38,5.33,2.23,4.87.82-.44.82-2.4.34-6.52Z"/>
+                        <path d="M85.97,27.19c-.7,0-1.36-.07-1.99-.19l-2.47,8.58h.02l2.01-.94.07.17c-3.1,3.97-3.61,4.7-4.75,4.7-1.31,0-1.77-1.62-1.55-3.9l2.18-8.31c-.39-.34-.68-.7-1.21-1.07v-.15h1.67c1.72-1.48,3.34-2.59,5.06-3.97h.1l-.87,3.97h2.03l-.31,1.11Z"/>
+                        <path d="M83.45,37.92l2.45-4.12h.19c.63,1.6,3.25,4.31,5.04,4.31.39,0,.44-.22.46-.44-.02-.53-.99-1.55-1.79-2.28l-2.23-2.03c-.87-.8-1.48-1.7-1.45-3.03.07-2.57,2.06-4.58,5.86-4.58,1.99,0,3.27.73,3.49.87l-2.06,4.14h-.17c-.48-1.45-2.57-4.17-3.97-4.17-.41,0-.58.17-.58.48-.02.41.44,1.28,1.31,2.11l2.28,2.11c1.19,1.11,1.57,2.28,1.55,3.34-.02,2.69-2.74,4.72-5.91,4.72-2.16,0-3.71-.78-4.46-1.45Z"/>
+                        <path d="M106.17,28.5c-.24,2.42-2.93,4.12-6.37,4.6.56,1.55,1.57,2.76,3.15,2.76.65,0,1.36-.17,1.94-.44l.02.12c-1.53,1.94-4.12,3.75-4.82,3.75-2.64,0-5.06-1.67-5.01-5.16,0-4.65,3.63-8.43,8.24-8.43,1.16,0,3.05.8,2.86,2.79ZM101.59,28.59c0-1.09-.31-1.84-1.02-1.84-.8,0-1.28,1.41-1.28,3.22,0,.87.12,1.84.36,2.71,1.19-.39,1.94-2.47,1.94-4.09Z"/>
+                    </g>
+                </svg>
+            </div>
+            <button class="header-logbuch-btn" id="logbuchBtn">
+                <span class="material-symbols-rounded">auto_stories</span>
+                <span class="logbuch-badge hidden" id="logbuchBadge">0</span>
+            </button>
+        </div>
+        
+        <!-- Filter Pills Container -->
         <div class="header-container">
             <div class="cluster-scroll-wrapper">
                 <div class="cluster-pills" id="clusterPills"></div>
@@ -1210,24 +1268,19 @@
             </button>
         </div>
         
-        <!-- Bottom Tabbar -->
+        <!-- Bottom Tabbar - 3 items -->
         <nav class="tabbar" id="tabbar">
             <button class="tab-item active" id="tabHeute">
-                <span class="material-symbols-rounded">radar</span>
-                <span>Radar</span>
+                <span class="material-symbols-rounded">explore</span>
+                <span>Heute</span>
             </button>
             <button class="tab-item" id="tabLaufend">
                 <span class="material-symbols-rounded">visibility</span>
-                <span>Horizont</span>
+                <span>Entdecken</span>
             </button>
             <button class="tab-item" id="tabOrte">
                 <span class="material-symbols-rounded">anchor</span>
-                <span>Ankerplätze</span>
-            </button>
-            <button class="tab-item" id="tabGemerkt">
-                <span class="material-symbols-rounded">auto_stories</span>
-                <span>Logbuch</span>
-                <span class="badge hidden" id="tabBadge">0</span>
+                <span>Orte</span>
             </button>
         </nav>
     </div>
@@ -1442,11 +1495,11 @@
         
         // Set random onboarding message
         var messages = [
-            { text: "Der See ist voller Leben.\n\nDu musst nur\nnah genug kommen.", cta: "Näher kommen" },
-            { text: "Am See ist nichts weit.\n\nDie Frage ist nicht: Wo?\nDie Frage ist: Wann?", cta: "Jetzt" },
-            { text: "Was wenn dein Lieblingsort\nnoch gar nicht\ndein Lieblingsort ist?", cta: "Finden" },
-            { text: "Manchmal ist das Beste:\n\nEinfach loszugehen.", cta: "Losgehen" },
-            { text: "Drei Länder.\nEin See.\n\nUnendlich viele Momente.", cta: "Momente erleben" }
+            { text: "Der See liegt weit,\ndie Wege sind offen.\n\nLass dich treiben,\nwo der Wind dich ruft.\n\nDein Kompass kennt die Richtung,\num heute endlich anzukommen.", cta: "Leinen los" },
+            { text: "Blick hinter den Nebel,\ntiefer als sonst.\n\nEs gibt Orte, die leuchten erst dann,\nwenn man sich traut zu suchen.\n\nFang einfach an zu finden.", cta: "In die Tiefe" },
+            { text: "Die Flut bringt viel,\nwir bergen das Echte.\n\nEin stiller Kompass in deiner Hand.\n\nDu musst nicht alles sehen,\nnur das, was lange bleibt.", cta: "An Bord gehen" },
+            { text: "Drei Länder, ein See,\nund du mittendrin.\n\nWechsle die Ufer,\ntausch die Perspektiven.\n\nDeine Heimat ist viel größer,\nals sie auf Karten erscheint.", cta: "Horizonte erweitern" },
+            { text: "Der Nebel lichtet sich\nfür den Moment.\n\nDie Sicht ist endlich klar\nfür Neues.\n\nEgal ob heute oder später:\nDas nächste Abenteuer ist deins.", cta: "Kurs setzen" }
         ];
         var randomMsg = messages[Math.floor(Math.random() * messages.length)];
         textEl.innerHTML = randomMsg.text.replace(/\n/g, '<br>');
@@ -1860,7 +1913,7 @@
         document.getElementById('tabHeute').onclick = function() { setNavMode('jetzt'); };
         document.getElementById('tabLaufend').onclick = function() { setNavMode('laeuft'); };
         document.getElementById('tabOrte').onclick = function() { setNavMode('orte'); };
-        document.getElementById('tabGemerkt').onclick = function() { setNavMode('gemerkt'); };
+        document.getElementById('logbuchBtn').onclick = function() { setNavMode('gemerkt'); };
         
         // View toggle handlers (Map/List)
         document.getElementById('toggleMap').onclick = function() {
@@ -2275,7 +2328,10 @@
             var feature = clusters[c];
             var coords = feature.geometry.coordinates;
             
-            if (feature.properties.cluster) {
+            // Check if this is a cluster (has cluster_id) or a single point
+            var isCluster = feature.properties.cluster === true && feature.properties.cluster_id !== undefined;
+            
+            if (isCluster) {
                 // It's a cluster
                 var count = feature.properties.point_count;
                 var clusterId = feature.properties.cluster_id;
@@ -2305,7 +2361,9 @@
                 })(clusterId, coords);
                 
                 markersOnMap.push(marker);
-            } else {
+            }
+            
+            if (!isCluster) {
                 // It's a single point
                 var props = feature.properties;
                 var el = document.createElement('div');
@@ -2716,7 +2774,7 @@
             document.getElementById('tabOrte').classList.add('active');
             CLUSTERS = CLUSTERS_ORTE;
         } else if (mode === 'gemerkt') {
-            document.getElementById('tabGemerkt').classList.add('active');
+            // Logbuch mode - show from header button, no tab highlight
             // Show bookmarks in list view
             setView('list');
             renderBookmarksList();
@@ -3218,7 +3276,7 @@
     }
     
     function updateBookmarksBadge() {
-        var badge = document.getElementById('tabBadge');
+        var badge = document.getElementById('logbuchBadge');
         if (badge) {
             if (savedEvents.length > 0) {
                 badge.textContent = savedEvents.length;
