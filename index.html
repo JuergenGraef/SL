@@ -119,22 +119,30 @@
         .top-bar { display: none; }
         .bookmarks-btn { display: none; }
         
-        /* Bottom Tabbar - Flat Design */
+        /* Bottom Tabbar - Flat Design, transparent safe area */
         .tabbar {
             position: absolute;
             bottom: 0; left: 0; right: 0;
             z-index: 1000;
-            background-color: var(--bg);
+            background-color: transparent;
             background-image: none;
             border: none;
             border-top: none;
-            padding-bottom: env(safe-area-inset-bottom, 0);
+            padding-bottom: 0;
             display: flex;
             justify-content: space-around;
             align-items: stretch;
             box-shadow: none;
         }
         .tabbar::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            bottom: env(safe-area-inset-bottom, 0);
+            background: var(--bg);
+            z-index: -1;
+        }
+        .tabbar::after {
             content: '';
             position: absolute;
             top: 0; left: 0; right: 0;
@@ -147,7 +155,8 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 13px 0 15px;
+            padding: 13px 0;
+            padding-bottom: calc(15px + env(safe-area-inset-bottom, 0));
             background: transparent;
             border: none;
             color: var(--text-secondary);
@@ -308,6 +317,7 @@
             display: flex;
             align-items: center;
             padding: 12px 16px;
+            padding-top: max(60px, calc(12px + env(safe-area-inset-top, 50px)));
             gap: 12px;
             border-bottom: 1px solid rgba(128,128,128,0.2);
         }
@@ -415,7 +425,8 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 70px 16px 12px;
+            padding: 16px;
+            padding-top: max(100px, calc(50px + env(safe-area-inset-top, 50px)));
             background: var(--bg);
             border-bottom: 1px solid rgba(128,128,128,0.15);
         }
@@ -1441,15 +1452,13 @@
         textEl.innerHTML = randomMsg.text.replace(/\n/g, '<br>');
         
         function checkReady() {
-            if (typeof maplibregl !== 'undefined') {
+            // Enable button after short delay, regardless of map library loading
+            setTimeout(function() {
                 statusEl.textContent = '';
                 buttonEl.textContent = randomMsg.cta;
                 buttonEl.disabled = false;
                 buttonEl.onclick = startApp;
-            } else {
-                statusEl.textContent = 'Lädt...';
-                setTimeout(checkReady, 100);
-            }
+            }, 500);
         }
         checkReady();
     })();
@@ -1708,7 +1717,14 @@
     }
     
     function initializeMap() {
-        var isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        // Check if MapLibre is available
+        if (typeof maplibregl === 'undefined') {
+            console.log('MapLibre not available - running without map');
+            // Still build UI elements
+            buildClusterPills();
+            setupEventHandlers();
+            return;
+        }
         
         // Custom Maptiler style
         var mapStyle = 'https://api.maptiler.com/maps/019bdbf4-e025-7ea4-bd83-b4a61123bb7a/style.json?key=jmg1Bp11a1QvmTVL92N1';
@@ -2245,8 +2261,8 @@
         
         // Create supercluster index
         clusterIndex = new Supercluster({
-            radius: 40,
-            maxZoom: 17,
+            radius: 35,
+            maxZoom: 18,
             minZoom: 0
         });
         clusterIndex.load(dataPoints);
@@ -2278,11 +2294,11 @@
                 (function(cId, coord) {
                     el.addEventListener('click', function(e) {
                         e.stopPropagation();
-                        // Zoom into cluster
+                        // Zoom into cluster - allow full expansion
                         var expansionZoom = clusterIndex.getClusterExpansionZoom(cId);
                         map.easeTo({
                             center: coord,
-                            zoom: Math.min(expansionZoom, 16),
+                            zoom: Math.min(expansionZoom + 1, 18),
                             duration: 500
                         });
                     });
