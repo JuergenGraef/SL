@@ -115,18 +115,34 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            height: calc(max(12px, env(safe-area-inset-top, 12px)) + 44px);
+            height: calc(max(12px, env(safe-area-inset-top, 12px)) + 48px);
+        }
+        .header-back-btn {
+            background: transparent;
+            border: none;
+            padding: 8px;
+            margin-left: -8px;
+            cursor: pointer;
+            color: var(--text);
+        }
+        .header-back-btn.hidden { display: none; }
+        .header-back-btn .material-symbols-rounded { font-size: 28px; }
+        .header-logo {
+            flex: 1;
+            display: flex;
+            align-items: center;
         }
         .header-logo svg {
-            height: 100%;
-            max-height: 32px;
+            height: 24px;
             width: auto;
         }
         .header-logo svg path { fill: var(--text); }
+        .header-logo.hidden { display: none; }
         .header-logbuch-btn {
             background: transparent;
             border: none;
             padding: 8px;
+            margin-right: -8px;
             cursor: pointer;
             color: var(--text);
             position: relative;
@@ -134,8 +150,8 @@
         .header-logbuch-btn .material-symbols-rounded { font-size: 28px; }
         .logbuch-badge {
             position: absolute;
-            top: 4px;
-            right: 4px;
+            top: 2px;
+            right: 2px;
             min-width: 16px;
             height: 16px;
             background: var(--text);
@@ -153,13 +169,14 @@
         /* Header - Filter Pills below main header */
         .header-container {
             position: fixed;
-            top: calc(max(12px, env(safe-area-inset-top, 12px)) + 52px);
+            top: calc(max(12px, env(safe-area-inset-top, 12px)) + 48px);
             left: 0; right: 0;
             z-index: 1000;
-            background: linear-gradient(to bottom, var(--bg) 0%, var(--bg) 50%, transparent 100%);
-            padding-top: 0;
+            background: linear-gradient(to bottom, var(--bg) 0%, var(--bg) 60%, transparent 100%);
+            padding-top: 4px;
             padding-bottom: 20px;
         }
+        .header-container.hidden { display: none; }
         
         /* Hide old top-bar elements */
         .top-bar { display: none; }
@@ -1221,8 +1238,11 @@
         
         <!-- Main Header with Logo and Logbuch -->
         <div class="main-header" id="mainHeader">
+            <button class="header-back-btn hidden" id="headerBackBtn">
+                <span class="material-symbols-rounded">arrow_back</span>
+            </button>
             <div class="header-logo" id="headerLogo">
-                <svg viewBox="0 0 127.02 63.61" xmlns="http://www.w3.org/2000/svg">
+                <svg viewBox="20 18 90 25" xmlns="http://www.w3.org/2000/svg">
                     <g>
                         <path d="M36.48,22.44h.12l-1.77,6.98h-.12c-2.01-3.71-4.99-5.91-7.07-5.91-.7,0-1.09.24-1.19.58-.24.87,1.14,2.28,3.22,3.8l2.69,1.99c1.87,1.38,2.52,2.83,2.03,4.77-.58,2.4-3.2,4.75-7.34,4.75-2.28,0-4.17-.7-6.23-1.02l1.53-7.56h.12c2.13,5.74,6.35,7.27,7.99,7.27.75,0,1.02-.24,1.02-.73,0-.82-1.04-2.01-2.93-3.46l-2.57-1.99c-1.96-1.5-2.64-3.03-2.11-5.16.8-3.27,3.75-4.36,6.71-4.36,1.57,0,3,.39,3.92,1.02l1.96-.97Z"/>
                         <path d="M47.02,28.5c-.24,2.42-2.93,4.12-6.37,4.6.56,1.55,1.57,2.76,3.15,2.76.65,0,1.36-.17,1.94-.44l.02.12c-1.53,1.94-4.12,3.75-4.82,3.75-2.64,0-5.06-1.67-5.01-5.16,0-4.65,3.63-8.43,8.24-8.43,1.16,0,3.05.8,2.86,2.79ZM42.44,28.59c0-1.09-.32-1.84-1.02-1.84-.8,0-1.28,1.41-1.28,3.22,0,.87.12,1.84.36,2.71,1.19-.39,1.94-2.47,1.94-4.09Z"/>
@@ -1242,7 +1262,7 @@
         </div>
         
         <!-- Filter Pills Container -->
-        <div class="header-container">
+        <div class="header-container" id="headerContainer">
             <div class="cluster-scroll-wrapper">
                 <div class="cluster-pills" id="clusterPills"></div>
             </div>
@@ -1482,8 +1502,6 @@
 
     <!-- MapLibre GL JS -->
     <script src="https://unpkg.com/maplibre-gl@4.1.2/dist/maplibre-gl.js"></script>
-    <!-- Supercluster for marker clustering -->
-    <script src="https://unpkg.com/supercluster@8.0.1/dist/supercluster.min.js"></script>
     
     <script>
     // =============================================
@@ -1738,7 +1756,6 @@
     var map = null;
     var markersOnMap = [];
     var userMarker = null;
-    var clusterIndex = null;
     var userLat = 47.781;
     var userLng = 9.614;
     var activeFilters = [];
@@ -1822,16 +1839,16 @@
             buildClusterPills();
             
             // Initial markers
-            updateMarkersWithClusters();
+            updateMarkersSimple();
         });
         
         map.on('zoomend', function() {
             currentZoom = map.getZoom();
-            updateMarkersWithClusters();
+            updateMarkersSimple();
         });
         
         map.on('moveend', function() {
-            updateMarkersWithClusters();
+            updateMarkersSimple();
         });
         
         setupEventHandlers();
@@ -2176,11 +2193,10 @@
     }
     
     function updateMarkers() {
-        // Legacy function - redirect to clustered version
-        updateMarkersWithClusters();
+        updateMarkersSimple();
     }
     
-    function updateMarkersWithClusters() {
+    function updateMarkersSimple() {
         // Clear existing markers
         for (var m = 0; m < markersOnMap.length; m++) {
             markersOnMap[m].remove();
@@ -2190,12 +2206,10 @@
         if (!map) return;
         
         var showIcons = currentZoom >= ZOOM_THRESHOLD;
-        var bounds = map.getBounds();
-        var bbox = [bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth()];
-        var zoom = Math.floor(map.getZoom());
+        var zoom = map.getZoom();
         
-        // Prepare data based on current mode
-        var dataPoints = [];
+        // Get data based on current mode
+        var items = [];
         var clusterCounts = {};
         var keys = Object.keys(CLUSTERS);
         for (var k = 0; k < keys.length; k++) {
@@ -2214,229 +2228,155 @@
         };
         
         if (currentNav === 'orte') {
-            // Venues
             for (var v = 0; v < VENUES.length; v++) {
                 var venue = VENUES[v];
                 var venueFilter = venueCategoryMap[venue.category] || 'zentren';
-                
-                if (activeFilters.length > 0 && activeFilters.indexOf(venueFilter) === -1) {
-                    continue;
-                }
-                
-                dataPoints.push({
-                    type: 'Feature',
-                    properties: {
-                        type: 'venue',
-                        index: v,
-                        category: venueFilter
-                    },
-                    geometry: {
-                        type: 'Point',
-                        coordinates: [venue.lng, venue.lat]
-                    }
-                });
+                if (activeFilters.length > 0 && activeFilters.indexOf(venueFilter) === -1) continue;
+                items.push({ type: 'venue', data: venue, category: venueFilter, lat: venue.lat, lng: venue.lng });
             }
         } else if (currentNav === 'laeuft') {
-            // Laufend events
             for (var i = 0; i < EVENTS_LAUFEND.length; i++) {
                 var event = EVENTS_LAUFEND[i];
-                
-                if (CLUSTERS[event.cluster]) {
-                    clusterCounts[event.cluster]++;
-                }
-                
-                if (activeFilters.length > 0 && activeFilters.indexOf(event.cluster) === -1) {
-                    continue;
-                }
-                
-                if (!CLUSTERS[event.cluster]) {
-                    continue;
-                }
-                
-                dataPoints.push({
-                    type: 'Feature',
-                    properties: {
-                        type: 'laufend',
-                        index: i,
-                        category: event.cluster
-                    },
-                    geometry: {
-                        type: 'Point',
-                        coordinates: [event.lng, event.lat]
-                    }
-                });
+                if (CLUSTERS[event.cluster]) clusterCounts[event.cluster]++;
+                if (activeFilters.length > 0 && activeFilters.indexOf(event.cluster) === -1) continue;
+                if (!CLUSTERS[event.cluster]) continue;
+                items.push({ type: 'laufend', data: event, category: event.cluster, lat: event.lat, lng: event.lng });
             }
-            
-            // Update counts
             for (var j = 0; j < keys.length; j++) {
                 var countEl = document.getElementById('count-' + keys[j]);
-                if (countEl) {
-                    countEl.textContent = '(' + (clusterCounts[keys[j]] || 0) + ')';
-                }
+                if (countEl) countEl.textContent = '(' + (clusterCounts[keys[j]] || 0) + ')';
             }
         } else {
-            // Heute events
             for (var i = 0; i < EVENTS.length; i++) {
                 var event = EVENTS[i];
-                
-                if (CLUSTERS[event.cluster]) {
-                    clusterCounts[event.cluster]++;
-                }
-                
-                if (activeFilters.length > 0 && activeFilters.indexOf(event.cluster) === -1) {
-                    continue;
-                }
-                
-                if (!CLUSTERS[event.cluster]) {
-                    continue;
-                }
-                
-                dataPoints.push({
-                    type: 'Feature',
-                    properties: {
-                        type: 'event',
-                        index: i,
-                        category: event.cluster
-                    },
-                    geometry: {
-                        type: 'Point',
-                        coordinates: [event.lng, event.lat]
-                    }
-                });
+                if (CLUSTERS[event.cluster]) clusterCounts[event.cluster]++;
+                if (activeFilters.length > 0 && activeFilters.indexOf(event.cluster) === -1) continue;
+                if (!CLUSTERS[event.cluster]) continue;
+                items.push({ type: 'event', data: event, category: event.cluster, lat: event.lat, lng: event.lng });
             }
-            
-            // Update counts
             for (var j = 0; j < keys.length; j++) {
                 var countEl = document.getElementById('count-' + keys[j]);
-                if (countEl) {
-                    countEl.textContent = '(' + (clusterCounts[keys[j]] || 0) + ')';
-                }
+                if (countEl) countEl.textContent = '(' + (clusterCounts[keys[j]] || 0) + ')';
             }
         }
         
-        // Create supercluster index
-        clusterIndex = new Supercluster({
-            radius: 35,
-            maxZoom: 18,
-            minZoom: 0
-        });
-        clusterIndex.load(dataPoints);
+        // Simple grid-based clustering
+        var clusterRadius = zoom < 10 ? 0.15 : zoom < 12 ? 0.05 : zoom < 14 ? 0.02 : 0;
+        var clusters = [];
+        var used = [];
         
-        // Get clusters for current view
-        var clusters = clusterIndex.getClusters(bbox, zoom);
-        
-        // Render clusters and points
-        for (var c = 0; c < clusters.length; c++) {
-            var feature = clusters[c];
-            var coords = feature.geometry.coordinates;
-            
-            // Check if this is a cluster (has cluster_id) or a single point
-            var isCluster = feature.properties.cluster === true && feature.properties.cluster_id !== undefined;
-            
-            if (isCluster) {
-                // It's a cluster
-                var count = feature.properties.point_count;
-                var clusterId = feature.properties.cluster_id;
+        if (clusterRadius > 0) {
+            for (var i = 0; i < items.length; i++) {
+                if (used[i]) continue;
+                var cluster = [items[i]];
+                used[i] = true;
                 
+                for (var j = i + 1; j < items.length; j++) {
+                    if (used[j]) continue;
+                    var dx = Math.abs(items[i].lng - items[j].lng);
+                    var dy = Math.abs(items[i].lat - items[j].lat);
+                    if (dx < clusterRadius && dy < clusterRadius) {
+                        cluster.push(items[j]);
+                        used[j] = true;
+                    }
+                }
+                clusters.push(cluster);
+            }
+        } else {
+            // No clustering at high zoom
+            for (var i = 0; i < items.length; i++) {
+                clusters.push([items[i]]);
+            }
+        }
+        
+        // Render clusters/markers
+        for (var c = 0; c < clusters.length; c++) {
+            var cluster = clusters[c];
+            var centerLat = 0, centerLng = 0;
+            for (var p = 0; p < cluster.length; p++) {
+                centerLat += cluster[p].lat;
+                centerLng += cluster[p].lng;
+            }
+            centerLat /= cluster.length;
+            centerLng /= cluster.length;
+            
+            if (cluster.length > 1) {
+                // Render as cluster
                 var el = document.createElement('div');
-                var size = count < 10 ? 36 : count < 50 ? 42 : 48;
+                var size = cluster.length < 10 ? 36 : cluster.length < 50 ? 42 : 48;
                 el.className = currentNav === 'orte' ? 'venue-cluster-marker' : 'cluster-marker';
                 el.style.width = size + 'px';
                 el.style.height = size + 'px';
-                el.textContent = count;
+                el.textContent = cluster.length;
                 
-                var marker = new maplibregl.Marker({ element: el })
-                    .setLngLat(coords)
-                    .addTo(map);
-                
-                (function(cId, coord) {
+                (function(lat, lng) {
                     el.addEventListener('click', function(e) {
                         e.stopPropagation();
-                        // Zoom into cluster - allow full expansion
-                        var expansionZoom = clusterIndex.getClusterExpansionZoom(cId);
-                        map.easeTo({
-                            center: coord,
-                            zoom: Math.min(expansionZoom + 1, 18),
-                            duration: 500
-                        });
+                        map.easeTo({ center: [lng, lat], zoom: map.getZoom() + 2, duration: 500 });
                     });
-                })(clusterId, coords);
+                })(centerLat, centerLng);
                 
+                var marker = new maplibregl.Marker({ element: el })
+                    .setLngLat([centerLng, centerLat])
+                    .addTo(map);
                 markersOnMap.push(marker);
-            }
-            
-            if (!isCluster) {
-                // It's a single point
-                var props = feature.properties;
+            } else {
+                // Render single item
+                var item = cluster[0];
                 var el = document.createElement('div');
+                var distance = calcDistance(userLat, userLng, item.lat, item.lng);
                 
-                if (props.type === 'venue') {
-                    var venue = VENUES[props.index];
-                    var distance = calcDistance(userLat, userLng, venue.lat, venue.lng);
+                if (item.type === 'venue') {
                     var size = showIcons ? 32 : 12;
                     el.className = 'venue-marker';
                     el.style.width = size + 'px';
                     el.style.height = size + 'px';
-                    
                     if (showIcons) {
-                        var iconName = CLUSTERS[props.category] ? CLUSTERS[props.category].icon : 'anchor';
+                        var iconName = CLUSTERS[item.category] ? CLUSTERS[item.category].icon : 'anchor';
                         el.innerHTML = '<span class="material-symbols-rounded" style="font-size:16px;">' + iconName + '</span>';
                     }
-                    
-                    (function(ven, dist, markerEl) {
+                    (function(venue, dist, markerEl) {
                         markerEl.addEventListener('click', function(e) { 
                             e.stopPropagation();
-                            openVenueSheet(ven, dist); 
+                            openVenueSheet(venue, dist); 
                         });
-                    })(venue, distance, el);
-                    
-                } else if (props.type === 'laufend') {
-                    var event = EVENTS_LAUFEND[props.index];
-                    var distance = calcDistance(userLat, userLng, event.lat, event.lng);
+                    })(item.data, distance, el);
+                } else if (item.type === 'laufend') {
                     var size = showIcons ? 36 : 12;
                     el.className = 'event-marker';
-                    el.setAttribute('data-event-id', event.id);
+                    el.setAttribute('data-event-id', item.data.id);
                     el.style.width = size + 'px';
                     el.style.height = size + 'px';
-                    
-                    if (showIcons && CLUSTERS[event.cluster]) {
-                        el.innerHTML = '<span class="material-symbols-rounded" style="font-size:18px;">' + CLUSTERS[event.cluster].icon + '</span>';
+                    if (showIcons && CLUSTERS[item.data.cluster]) {
+                        el.innerHTML = '<span class="material-symbols-rounded" style="font-size:18px;">' + CLUSTERS[item.data.cluster].icon + '</span>';
                     }
-                    
                     (function(ev, dist, markerEl) {
                         markerEl.addEventListener('click', function(e) { 
                             e.stopPropagation();
                             openSheetLaufend(ev, dist); 
                         });
-                    })(event, distance, el);
-                    
+                    })(item.data, distance, el);
                 } else {
-                    // Regular event
-                    var event = EVENTS[props.index];
-                    var distance = calcDistance(userLat, userLng, event.lat, event.lng);
                     var size = showIcons ? 36 : 12;
-                    var theaterClass = event.cluster === 'buehne' ? ' theater' : '';
+                    var theaterClass = item.data.cluster === 'buehne' ? ' theater' : '';
                     el.className = 'event-marker' + theaterClass;
-                    el.setAttribute('data-event-id', event.id);
+                    el.setAttribute('data-event-id', item.data.id);
                     el.style.width = size + 'px';
                     el.style.height = size + 'px';
-                    
-                    if (showIcons && CLUSTERS[event.cluster]) {
-                        el.innerHTML = '<span class="material-symbols-rounded" style="font-size:18px;">' + CLUSTERS[event.cluster].icon + '</span>';
+                    if (showIcons && CLUSTERS[item.data.cluster]) {
+                        el.innerHTML = '<span class="material-symbols-rounded" style="font-size:18px;">' + CLUSTERS[item.data.cluster].icon + '</span>';
                     }
-                    
                     (function(ev, dist, markerEl) {
                         markerEl.addEventListener('click', function(e) { 
                             e.stopPropagation();
                             openSheet(ev, dist); 
                         });
-                    })(event, distance, el);
+                    })(item.data, distance, el);
                 }
                 
                 var marker = new maplibregl.Marker({ element: el })
-                    .setLngLat(coords)
+                    .setLngLat([item.lng, item.lat])
                     .addTo(map);
-                
                 markersOnMap.push(marker);
             }
         }
