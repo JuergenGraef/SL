@@ -115,9 +115,11 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            height: calc(max(12px, env(safe-area-inset-top, 12px)) + 44px);
         }
         .header-logo svg {
-            height: 28px;
+            height: 100%;
+            max-height: 32px;
             width: auto;
         }
         .header-logo svg path { fill: var(--text); }
@@ -172,8 +174,8 @@
             display: flex;
             justify-content: space-around;
             align-items: flex-start;
-            padding-top: 8px;
-            padding-bottom: calc(8px + env(safe-area-inset-bottom, 0));
+            padding-top: 10px;
+            padding-bottom: calc(20px + env(safe-area-inset-bottom, 0));
             border-top: 1px solid rgba(128,128,128,0.15);
         }
         .tab-item {
@@ -222,7 +224,7 @@
         /* View Toggle - centered above tabbar */
         .view-toggle {
             position: absolute;
-            bottom: calc(80px + env(safe-area-inset-bottom, 0));
+            bottom: calc(90px + env(safe-area-inset-bottom, 0));
             left: 50%;
             transform: translateX(-50%);
             z-index: 999;
@@ -231,10 +233,10 @@
             border-radius: 100px;
             padding: 4px;
             gap: 4px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            box-shadow: none;
         }
         @media (prefers-color-scheme: light) {
-            .view-toggle { background: rgba(255,255,255,0.95); box-shadow: 0 4px 20px rgba(0,0,0,0.15); }
+            .view-toggle { background: rgba(255,255,255,0.95); box-shadow: none; }
         }
         .view-toggle::before {
             content: '';
@@ -452,7 +454,7 @@
             justify-content: space-between;
             align-items: center;
             padding: 16px;
-            padding-top: max(100px, calc(50px + env(safe-area-inset-top, 50px)));
+            padding-top: calc(max(12px, env(safe-area-inset-top, 12px)) + 110px);
             background: var(--bg);
             border-bottom: 1px solid rgba(128,128,128,0.15);
         }
@@ -2226,7 +2228,7 @@
                     properties: {
                         type: 'venue',
                         index: v,
-                        cluster: venueFilter
+                        category: venueFilter
                     },
                     geometry: {
                         type: 'Point',
@@ -2256,7 +2258,7 @@
                     properties: {
                         type: 'laufend',
                         index: i,
-                        cluster: event.cluster
+                        category: event.cluster
                     },
                     geometry: {
                         type: 'Point',
@@ -2294,7 +2296,7 @@
                     properties: {
                         type: 'event',
                         index: i,
-                        cluster: event.cluster
+                        category: event.cluster
                     },
                     geometry: {
                         type: 'Point',
@@ -2377,7 +2379,7 @@
                     el.style.height = size + 'px';
                     
                     if (showIcons) {
-                        var iconName = CLUSTERS[props.cluster] ? CLUSTERS[props.cluster].icon : 'anchor';
+                        var iconName = CLUSTERS[props.category] ? CLUSTERS[props.category].icon : 'anchor';
                         el.innerHTML = '<span class="material-symbols-rounded" style="font-size:16px;">' + iconName + '</span>';
                     }
                     
