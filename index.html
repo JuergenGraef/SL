@@ -89,6 +89,17 @@
             background: var(--bg);
             color: var(--text);
         }
+        /* Explicit safe area filler at bottom */
+        #safeAreaFiller {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: env(safe-area-inset-bottom, 0px);
+            background: var(--bg);
+            z-index: 99999;
+            pointer-events: none;
+        }
         
 /* ===========================================
    2. ONBOARDING
@@ -1391,6 +1402,8 @@ a[href*="openstreetmap"] {
     
     <!-- App -->
     <div id="app">
+        <!-- Safe area bottom filler -->
+        <div id="safeAreaFiller"></div>
         <div id="map"></div>
         
         <!-- Main Header with Logo and Logbuch -->
