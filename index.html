@@ -92,10 +92,10 @@
         /* Explicit safe area filler at bottom - extends into iOS home indicator area */
         #safeAreaFiller {
             position: fixed;
-            bottom: calc(-1 * env(safe-area-inset-bottom, 34px));
+            bottom: -100px;
             left: 0;
             right: 0;
-            height: calc(50px + env(safe-area-inset-bottom, 34px));
+            height: 150px;
             background: var(--bg);
             z-index: 99999;
             pointer-events: none;
