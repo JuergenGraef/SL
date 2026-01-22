@@ -89,14 +89,14 @@
             background: var(--bg);
             color: var(--text);
         }
-        /* Explicit safe area filler at bottom */
+        /* Explicit safe area filler at bottom - extends into iOS home indicator area */
         #safeAreaFiller {
             position: fixed;
-            bottom: 0;
+            bottom: calc(-1 * env(safe-area-inset-bottom, 34px));
             left: 0;
             right: 0;
-            height: 50px; /* Fixed height for debug */
-            background: red; /* Debug color */
+            height: calc(50px + env(safe-area-inset-bottom, 34px));
+            background: var(--bg);
             z-index: 99999;
             pointer-events: none;
         }
